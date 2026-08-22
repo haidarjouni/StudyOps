@@ -1,15 +1,17 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APITestCase
 from rest_framework import status
-from django.contrib.auth import get_user_model
-
+from rest_framework.test import APITestCase
 from study_preference.models import StudyPreference
+
 User = get_user_model()
+
+
 # Create your tests here.
-class SignUpTest(APITestCase): #because i am calling api
-    def test_signup_success(self): 
-        valid_signup_data = { #arrange
+class SignUpTest(APITestCase):  # because i am calling api
+    def test_signup_success(self):
+        valid_signup_data = {  # arrange
             "username": "study_student_01",
             "email": "student01@example.com",
             "password": "Orbit!Cedar9274",
@@ -22,8 +24,8 @@ class SignUpTest(APITestCase): #because i am calling api
             },
         }
         signup_url = reverse("signup")
-        response = self.client.post(signup_url, valid_signup_data, format="json") #act
-        #assert
+        response = self.client.post(signup_url, valid_signup_data, format="json")  # act
+        # assert
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 1)
         user = User.objects.get(email="student01@example.com")
@@ -35,8 +37,10 @@ class SignUpTest(APITestCase): #because i am calling api
         self.assertEqual(preference.preferred_session_minutes, 45)
         self.assertEqual(preference.buffer_minutes, 10)
         self.assertTrue(StudyPreference.objects.filter(user=user).exists())
-        self.assertNotIn("password", response.data)  # Ensure password is not returned in the response
-        
+        self.assertNotIn(
+            "password", response.data
+        )  # Ensure password is not returned in the response
+
     def test_signup_failure_validating_time(self):
         invalid_study_time_data = {
             "username": "study_student_02",
@@ -56,18 +60,20 @@ class SignUpTest(APITestCase): #because i am calling api
         self.assertEqual(User.objects.count(), 0)
         self.assertEqual(StudyPreference.objects.count(), 0)
 
+
 class LoginTest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="study_student_03",
             email="study_student_03@example.com",
-            password="study_student_03_password"
+            password="study_student_03_password",
         )
+
     def test_login_success(self):
         user = User.objects.get(username="study_student_03")
         login_data = {
             "username": "study_student_03",
-            "password": "study_student_03_password"
+            "password": "study_student_03_password",
         }
         login_url = reverse("token_obtain_pair")
         response = self.client.post(login_url, login_data, format="json")
