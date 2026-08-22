@@ -7,9 +7,9 @@ from django.contrib.auth import get_user_model
 from study_preference.models import StudyPreference
 User = get_user_model()
 # Create your tests here.
-class SignUpTest(APITestCase):
-    def test_signup_success(self):
-        valid_signup_data = {
+class SignUpTest(APITestCase): #because i am calling api
+    def test_signup_success(self): 
+        valid_signup_data = { #arrange
             "username": "study_student_01",
             "email": "student01@example.com",
             "password": "Orbit!Cedar9274",
@@ -22,7 +22,8 @@ class SignUpTest(APITestCase):
             },
         }
         signup_url = reverse("signup")
-        response = self.client.post(signup_url, valid_signup_data, format="json")
+        response = self.client.post(signup_url, valid_signup_data, format="json") #act
+        #assert
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 1)
         user = User.objects.get(email="student01@example.com")
@@ -54,3 +55,24 @@ class SignUpTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 0)
         self.assertEqual(StudyPreference.objects.count(), 0)
+
+class LoginTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="study_student_03",
+            email="study_student_03@example.com",
+            password="study_student_03_password"
+        )
+    def test_login_success(self):
+        user = User.objects.get(username="study_student_03")
+        login_data = {
+            "username": "study_student_03",
+            "password": "study_student_03_password"
+        }
+        login_url = reverse("token_obtain_pair")
+        response = self.client.post(login_url, login_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access_token", response.cookies)
+        self.assertIn("refresh_token", response.cookies)
+        self.assertNotIn("access", response.data)
+        self.assertNotIn("refresh", response.data)
