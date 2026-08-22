@@ -3,13 +3,16 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 from study_preference.models import StudyPreference
 
 User = get_user_model()
 
 
 # Create your tests here.
-class SignUpTest(APITestCase):  # because i am calling api
+class SignUpTest(APITestCase):
+    SIGNUP_URL = reverse("signup")
+
     def test_signup_success(self):
         valid_signup_data = {  # arrange
             "username": "study_student_01",
@@ -23,8 +26,9 @@ class SignUpTest(APITestCase):  # because i am calling api
                 "buffer_minutes": 10,
             },
         }
-        signup_url = reverse("signup")
-        response = self.client.post(signup_url, valid_signup_data, format="json")  # act
+        response = self.client.post(
+            self.SIGNUP_URL, valid_signup_data, format="json"
+        )  # act
         # assert
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), 1)
@@ -54,14 +58,17 @@ class SignUpTest(APITestCase):  # because i am calling api
                 "buffer_minutes": 10,
             },
         }
-        signup_url = reverse("signup")
-        response = self.client.post(signup_url, invalid_study_time_data, format="json")
+        response = self.client.post(
+            self.SIGNUP_URL, invalid_study_time_data, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(User.objects.count(), 0)
         self.assertEqual(StudyPreference.objects.count(), 0)
 
 
-class LoginTest(APITestCase):
+class CookieTokenObtainPairTest(APITestCase):
+    LOGIN_URL = reverse("cookie_token_obtain_pair")
+
     def setUp(self):
         self.user = User.objects.create_user(
             username="study_student_03",
@@ -70,15 +77,76 @@ class LoginTest(APITestCase):
         )
 
     def test_login_success(self):
-        user = User.objects.get(username="study_student_03")
         login_data = {
             "username": "study_student_03",
             "password": "study_student_03_password",
         }
-        login_url = reverse("token_obtain_pair")
-        response = self.client.post(login_url, login_data, format="json")
+        response = self.client.post(self.LOGIN_URL, login_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access_token", response.cookies)
         self.assertIn("refresh_token", response.cookies)
         self.assertNotIn("access", response.data)
         self.assertNotIn("refresh", response.data)
+
+    def test_login_failure(self):
+        invalid_login_data = {
+            "username": "study_student_03",
+            "password": "wrong_password",
+        }
+        response = self.client.post(self.LOGIN_URL, invalid_login_data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn("access_token", response.cookies)
+        self.assertNotIn("refresh_token", response.cookies)
+
+
+class CookieTokenRefreshTest(APITestCase):
+    REFRESH_URL = reverse("cookie_token_refresh")
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="study_student_04",
+            email="study_student_04@example.com",
+            password="study_student_04_password",
+        )
+
+    def test_refresh_token_success(self):
+        user = self.user
+        refresh = RefreshToken.for_user(user)
+        self.client.cookies["refresh_token"] = str(refresh)
+        response = self.client.post(self.REFRESH_URL, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access_token", response.cookies)
+        self.assertIn("refresh_token", response.cookies)
+
+    def test_refresh_token_failure(self):
+        self.client.cookies["refresh_token"] = "invalid_refresh_token"
+        response = self.client.post(self.REFRESH_URL, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertNotIn("access_token", response.cookies)
+        self.assertNotIn("refresh_token", response.cookies)
+
+
+class LogoutTest(APITestCase):
+    LOGOUT_URL = reverse("logout")
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="study_student_05",
+            email="study_student_05@example.com",
+            password="study_student_05_password",
+        )
+
+    def test_logout_success(self):
+        user = self.user
+        refresh = RefreshToken.for_user(user)
+        self.client.cookies["refresh_token"] = str(refresh)
+        response = self.client.post(self.LOGOUT_URL, {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        access_cookie = response.cookies["access_token"]
+        refresh_cookie = response.cookies["refresh_token"]
+
+        self.assertEqual(access_cookie.value, "")
+        self.assertEqual(int(access_cookie["max-age"]), 0)
+
+        self.assertEqual(refresh_cookie.value, "")
+        self.assertEqual(int(refresh_cookie["max-age"]), 0)
