@@ -23,7 +23,7 @@ class StudyPreference(models.Model):
     )
     earliest_study_time = models.TimeField()
     latest_study_time = models.TimeField()
-    prefered_session_minutes = models.PositiveIntegerField()
+    preferred_session_minutes = models.PositiveIntegerField()
     buffer_minutes = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
