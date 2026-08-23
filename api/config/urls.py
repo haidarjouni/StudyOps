@@ -22,5 +22,7 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')), #include the urls for the accounts app
     re_path(r'^auth/', include('djoser.urls')),
     path('api/subject/', include('subject.urls')), #include the urls for the subject app
+    path('api/study_session/', include('study_session.urls')), #include the urls for the study_session app
+    path('api/study_task/', include("study_task.urls")), #include the urls for the study_task app
     path('api/study_preference/', include("study_preference.urls")), #include the urls for the study_preference app
 ]

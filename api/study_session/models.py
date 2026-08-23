@@ -1,11 +1,13 @@
 from django.db import models
 
+
 # Create your models here.
 class StudySession(models.Model):
     class SessionStatus(models.TextChoices):
         SCHEDULED = "scheduled", "Scheduled"
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
+
     user = models.ForeignKey(
         "auth.user",
         on_delete=models.CASCADE,
