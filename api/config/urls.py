@@ -16,9 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path, re_path
-
+from subject.urls import urlpatterns as subject_url_patterns
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/accounts/', include('accounts.urls')), #include the urls for the accounts app
     re_path(r'^auth/', include('djoser.urls')),
+    path('api/subject/', include(subject_url_patterns)), #include the urls for the subject app
 ]
