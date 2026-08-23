@@ -2,7 +2,7 @@ from django.db import models
 
 
 # Create your models here.
-class study_task(models.Model):
+class StudyTask(models.Model):
     class TaskType(models.TextChoices):
         ASSIGNMENT = "assignment", "Assignment"
         EXAM = "exam", "Exam"
