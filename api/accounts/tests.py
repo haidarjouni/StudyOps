@@ -150,3 +150,25 @@ class LogoutTest(APITestCase):
 
         self.assertEqual(refresh_cookie.value, "")
         self.assertEqual(int(refresh_cookie["max-age"]), 0)
+
+
+class DjoserTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="study_student_05",
+            email="study_student_05@example.com",
+            password="study_student_05_password",
+        )
+
+    def test_djoser_me_returns_authenticated_user(self):
+        user = self.user
+        self.client.force_authenticate(user=user)
+        response = self.client.get(reverse("user-me"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["username"], user.username)
+        self.assertEqual(user.pk, response.data["id"])
+
+    def test_djoser_me_rejects_anonymous_user(self):
+        response = self.client.get(reverse("user-me"))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

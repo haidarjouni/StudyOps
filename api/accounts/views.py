@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from requests import Response
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import (TokenObtainPairView,
@@ -14,7 +14,7 @@ from .utils import set_jwt_cookies
 # Create your views here.
 class SignUpView(generics.CreateAPIView):  # view to handle the signup process
     serializer_class = SignUpSerializer
-    permission_classs = [AllowAny]  # allow any user to access this view
+    permission_classses = [AllowAny]  # allow any user to access this view
 
 
 class CookieTokenObtainPairView(
