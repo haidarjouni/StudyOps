@@ -1,4 +1,3 @@
-
 from rest_framework import serializers
 
 from .models import StudyPreference
@@ -14,6 +13,7 @@ class StudyPreferenceSerializer(serializers.ModelSerializer):
             "preferred_session_minutes",
             "buffer_minutes",
         )
+
     def validate(self, data):
         if data["earliest_study_time"] >= data["latest_study_time"]:
             raise serializers.ValidationError(
