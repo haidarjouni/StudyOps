@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from api.study_task.models import StudyTask
-from api.study_task.serializers import StudyTaskSerializer
+from study_task.models import StudyTask
+from study_task.serializers import StudyTaskSerializer
 from subject.models import Subject
 from subject.serializers import SubjectSerializer
 
@@ -34,6 +34,7 @@ class StudySessionSerializer(serializers.ModelSerializer):
             "subject",
             "subject_id",
             "task",
+            "task_id",
             "start_at",
             "end_at",
             "status",
@@ -62,14 +63,6 @@ class StudySessionSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("You cannot use another user's task.")
 
         return task
-
-    def validate_subject_id(self, subject):
-        request = self.context["request"]
-
-        if subject.user_id != request.user.id:
-            raise serializers.ValidationError("You cannot use another user's subject.")
-
-        return subject
 
     def validate(self, attrs):
         start_at = attrs.get(
