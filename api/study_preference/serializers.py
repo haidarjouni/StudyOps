@@ -15,8 +15,22 @@ class StudyPreferenceSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, data):
-        if data["earliest_study_time"] >= data["latest_study_time"]:
-            raise serializers.ValidationError(
-                "Earliest study time must be before latest study time."
-            )
+        earliest = data.get(
+            "earliest_study_time",
+            getattr(self.instance, "earliest_study_time", None),
+        )
+
+        latest = data.get(
+            "latest_study_time",
+            getattr(self.instance, "latest_study_time", None),
+        )
+        if earliest is not None and latest is not None:
+            if earliest >= latest:
+                raise serializers.ValidationError(
+                    {
+                        "latest_study_time": (
+                            "Latest study time must be after earliest study time."
+                        )
+                    }
+                )
         return data
