@@ -18,6 +18,13 @@ class StudySession(models.Model):
         on_delete=models.CASCADE,
         related_name="study_sessions",
     )
+    task = models.ForeignKey(
+        "study_task.StudyTask",
+        on_delete=models.SET_NULL,
+        related_name="study_sessions",
+        null=True,
+        blank=True,
+    )
     start_at = models.DateTimeField()
     end_at = models.DateTimeField()
     status = models.CharField(

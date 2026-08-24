@@ -13,10 +13,10 @@ class Subject(models.Model):
     semester = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields= ["user","code"],
-                name = "unique_subject_user_code"
-            )       
+                fields=["user", "code"], name="unique_subject_user_code"
+            )
         ]
