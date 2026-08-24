@@ -62,6 +62,14 @@ class StudySessionSerializer(serializers.ModelSerializer):
         if task is not None and task.user_id != request.user.id:
             raise serializers.ValidationError("You cannot use another user's task.")
 
+        if task is not None and task.task_status in {
+            StudyTask.TaskStatus.DONE,
+            StudyTask.TaskStatus.CANCELLED,
+        }:
+            raise serializers.ValidationError(
+                "You cannot schedule a completed or cancelled task."
+            )
+
         return task
 
     def validate(self, attrs):
@@ -81,6 +89,14 @@ class StudySessionSerializer(serializers.ModelSerializer):
             "task",
             getattr(self.instance, "task", None),
         )
+        status = attrs.get(
+            "status",
+            getattr(
+                self.instance,
+                "status",
+                StudySession.SessionStatus.SCHEDULED,
+            ),
+        )
 
         errors = {}
 
@@ -92,6 +108,27 @@ class StudySessionSerializer(serializers.ModelSerializer):
                 errors["task_id"] = (
                     "The task and study session must belong to the same subject."
                 )
+
+        if (
+            start_at
+            and end_at
+            and start_at < end_at
+            and status != StudySession.SessionStatus.CANCELLED
+        ):
+            request = self.context["request"]
+            overlapping_sessions = StudySession.objects.filter(
+                user=request.user,
+                start_at__lt=end_at,
+                end_at__gt=start_at,
+            ).exclude(status=StudySession.SessionStatus.CANCELLED)
+
+            if self.instance is not None:
+                overlapping_sessions = overlapping_sessions.exclude(
+                    pk=self.instance.pk
+                )
+
+            if overlapping_sessions.exists():
+                errors["start_at"] = "This session overlaps an existing session."
 
         if errors:
             raise serializers.ValidationError(errors)

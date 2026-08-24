@@ -12,7 +12,7 @@ class StudySessionViewSet(ModelViewSet):
     def get_queryset(self):
         return (
             StudySession.objects.filter(user=self.request.user)
-            .select_related("subject")
+            .select_related("subject", "task")
             .order_by("-start_at")
         )
 
