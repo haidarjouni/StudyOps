@@ -25,5 +25,4 @@ urlpatterns = [
     path('api/study_session/', include('study_session.urls')), #include the urls for the study_session app
     path('api/study_task/', include("study_task.urls")), #include the urls for the study_task app
     path('api/study_preference/', include("study_preference.urls")), #include the urls for the study_preference app
-    path('api/assistant/', include("assistant.urls")), #include the urls for the assistant app
 ]
