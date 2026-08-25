@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'subject',
     'study_preference',
     'accounts',
+    'assistant',
 ]
 
 MIDDLEWARE = [
