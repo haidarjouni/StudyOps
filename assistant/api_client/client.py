@@ -117,7 +117,7 @@ class StudyOpsAPIClient:
 
     async def list_subjects(self) -> list[Subject]:
         response = await self._request("GET", "subject/")
-        return self._validate_python(response.json(), TypeAdapter(list[Subject]))
+        return self._validate(response.json(), TypeAdapter(list[Subject]))
 
     async def get_subject(self, subject_id: int) -> Subject:
         response = await self._request(
@@ -153,7 +153,7 @@ class StudyOpsAPIClient:
                 exclude_unset=True,
             ),
         )
-        return self._validate(response, Subject)
+        return self._validate(response, TypeAdapter(Subject))
 
     async def delete_subject(self, subject_id: int) -> None:
         await self._request(
