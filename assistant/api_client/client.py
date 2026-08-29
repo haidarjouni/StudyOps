@@ -1,11 +1,19 @@
 # assistant/api_client/client.py
 
-from typing import Any
+from typing import Any, TypeVar
 
 import httpx
 from pydantic import TypeAdapter, ValidationError
-
-from schemas import Subject, SubjectCreate, SubjectUpdate
+from schemas import (
+    StudyPreference,
+    StudyPreferenceUpdate,
+    StudySession,
+    StudySessionCreate,
+    StudySessionUpdate,
+    Subject,
+    SubjectCreate,
+    SubjectUpdate,
+)
 
 from .exceptions import (
     APIAuthenticationError,
@@ -13,12 +21,6 @@ from .exceptions import (
     APITransportError,
     APIValidationError,
 )
-
-
-from typing import TypeVar
-
-from pydantic import TypeAdapter
-
 
 T = TypeVar("T")
 
@@ -75,9 +77,7 @@ class StudyOpsAPIClient:
                 **kwargs,
             )
         except httpx.RequestError as exc:
-            raise APITransportError(
-                f"Could not reach the StudyOps API: {exc}"
-            ) from exc
+            raise APITransportError(f"Could not reach the StudyOps API: {exc}") from exc
 
         if response.status_code == 401:
             raise APIAuthenticationError(
@@ -104,9 +104,7 @@ class StudyOpsAPIClient:
         try:
             data = response.json()
         except ValueError as exc:
-            raise APIValidationError(
-                "StudyOps API returned invalid JSON"
-            ) from exc
+            raise APIValidationError("StudyOps API returned invalid JSON") from exc
 
         try:
             return adapter.validate_python(data)
@@ -117,7 +115,7 @@ class StudyOpsAPIClient:
 
     async def list_subjects(self) -> list[Subject]:
         response = await self._request("GET", "subject/")
-        return self._validate(response.json(), TypeAdapter(list[Subject]))
+        return self._validate(response, TypeAdapter(list[Subject]))
 
     async def get_subject(self, subject_id: int) -> Subject:
         response = await self._request(
@@ -160,3 +158,67 @@ class StudyOpsAPIClient:
             "DELETE",
             f"subject/{subject_id}/",
         )
+
+    async def list_sessions(self) -> list[StudySession]:
+        response = await self._request("GET", "study_session/")
+        return self._validate(response, TypeAdapter(list[StudySession]))
+
+    async def get_session(self, session_id: int) -> StudySession:
+        response = await self._request(
+            "GET",
+            f"study_session/{session_id}/",
+        )
+        return self._validate(response, TypeAdapter(StudySession))
+
+    async def create_session(
+        self,
+        session: StudySessionCreate,
+    ) -> StudySession:
+        response = await self._request(
+            "POST",
+            "study_session/",
+            json=session.model_dump(
+                mode="json",
+                exclude_none=True,
+            ),
+        )
+        return self._validate(response, TypeAdapter(StudySession))
+
+    async def delete_session(self, session_id: int) -> None:
+        await self._request(
+            "DELETE",
+            f"study_session/{session_id}/",
+        )
+
+    async def update_session(
+        self,
+        session_id: int,
+        changes: StudySessionUpdate,
+    ) -> StudySession:
+        response = await self._request(
+            "PATCH",
+            f"study_session/{session_id}/",
+            json=changes.model_dump(
+                mode="json",
+                exclude_unset=True,
+            ),
+        )
+        return self._validate(response, TypeAdapter(StudySession))
+
+    async def get_preferences(self) -> StudyPreference:
+        response = await self._request("GET", "study_preference/me")
+        return self._validate(response, TypeAdapter(StudyPreference))
+
+    async def update_preferences(
+        self,
+        changes: StudyPreferenceUpdate,
+    ) -> StudyPreference:
+        response = await self._request(
+            "PATCH",
+            "study_preference/me",
+            json=changes.model_dump(
+                mode="json",
+                exclude_unset=True,
+            ),
+        )
+        return self._validate(response, TypeAdapter(StudyPreference))
