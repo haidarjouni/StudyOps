@@ -2,6 +2,7 @@ import json
 
 import httpx
 import pytest
+
 from api_client.client import StudyOpsAPIClient
 from api_client.exceptions import APIResponseError
 from schemas.study_preference import StudyPreferenceUpdate
@@ -14,7 +15,7 @@ def session_response_data(
     start_at: str = "2026-08-28T10:00:00Z",
     end_at: str = "2026-08-28T11:00:00Z",
     status: str = "scheduled",
-) -> dict:
+) -> dict:  # to create responses faster
     return {
         "id": 1,
         "user": 10,
@@ -114,6 +115,7 @@ async def test_list_subjects_api_failure():
 
     assert error.value.status_code == 500
 
+
 @pytest.mark.asyncio
 async def test_create_subject():
     def fake_api(request: httpx.Request) -> httpx.Response:
@@ -129,6 +131,7 @@ async def test_create_subject():
                 "updated_at": "2026-08-28T10:00:00Z",
             },
         )
+
     transport = httpx.MockTransport(fake_api)
     async with StudyOpsAPIClient(
         "http://test/api/",
@@ -139,9 +142,7 @@ async def test_create_subject():
             code="phys101",
             semester=1,
         )
-        subject2 = await api.create_subject(
-            subject=subject
-        )
+        subject2 = await api.create_subject(subject=subject)
     assert subject2.id == 2
     assert subject2.user == 10
     assert subject2.name == "Physics"
@@ -155,6 +156,7 @@ async def test_delete_subject():
         return httpx.Response(
             204,
         )
+
     transport = httpx.MockTransport(fake_api)
     async with StudyOpsAPIClient(
         "http://test/api/",
@@ -181,7 +183,7 @@ async def test_list_sessions():
                         "code": "CS101",
                         "semester": 1,
                         "created_at": "2026-08-20T09:00:00Z",
-                        "updated_at": "2026-08-20T09:00:00Z"
+                        "updated_at": "2026-08-20T09:00:00Z",
                     },
                     "task": {
                         "id": 3,
@@ -195,13 +197,13 @@ async def test_list_sessions():
                         "estimated_minutes": 120,
                         "due_date": "2026-08-30T18:00:00Z",
                         "created_at": "2026-08-25T10:00:00Z",
-                        "updated_at": "2026-08-27T14:30:00Z"
+                        "updated_at": "2026-08-27T14:30:00Z",
                     },
                     "start_at": "2026-08-28T10:00:00Z",
                     "end_at": "2026-08-28T11:00:00Z",
                     "status": "scheduled",
                     "created_at": "2026-08-28T09:30:00Z",
-                    "updated_at": "2026-08-28T09:30:00Z"
+                    "updated_at": "2026-08-28T09:30:00Z",
                 }
             ],
         )
@@ -218,6 +220,7 @@ async def test_list_sessions():
     assert sessions[0].id == 1
     assert sessions[0].user == 10
 
+
 @pytest.mark.asyncio
 async def test_get_study_session():
     def fake_api(request: httpx.Request) -> httpx.Response:
@@ -233,7 +236,7 @@ async def test_get_study_session():
                     "code": "CS101",
                     "semester": 1,
                     "created_at": "2026-08-20T09:00:00Z",
-                    "updated_at": "2026-08-20T09:00:00Z"
+                    "updated_at": "2026-08-20T09:00:00Z",
                 },
                 "task": {
                     "id": 3,
@@ -247,13 +250,13 @@ async def test_get_study_session():
                     "estimated_minutes": 120,
                     "due_date": "2026-08-30T18:00:00Z",
                     "created_at": "2026-08-25T10:00:00Z",
-                    "updated_at": "2026-08-27T14:30:00Z"
+                    "updated_at": "2026-08-27T14:30:00Z",
                 },
                 "start_at": "2026-08-28T10:00:00Z",
                 "end_at": "2026-08-28T11:00:00Z",
                 "status": "scheduled",
                 "created_at": "2026-08-28T09:30:00Z",
-                "updated_at": "2026-08-28T09:30:00Z"
+                "updated_at": "2026-08-28T09:30:00Z",
             },
         )
 
@@ -273,15 +276,19 @@ async def test_get_study_session():
 async def test_create_study_session():
     def fake_api(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        assert request.url.path == "/api/study_session/"
-        assert json.loads(request.content) == {
+        assert (
+            request.url.path == "/api/study_session/"
+        )  # checking if the request is correct
+        assert json.loads(
+            request.content
+        ) == {  # checking if the request body is correct (serialized to JSON)
             "subject_id": 2,
             "task_id": 3,
             "start_at": "2026-08-29T10:00:00Z",
             "end_at": "2026-08-29T11:00:00Z",
             "status": "scheduled",
         }
-        return httpx.Response(
+        return httpx.Response(  # returning a mock response with the expected data
             201,
             json=session_response_data(
                 start_at="2026-08-29T10:00:00Z",

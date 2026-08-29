@@ -4,28 +4,20 @@ from typing import Any, TypeVar
 
 import httpx
 from pydantic import TypeAdapter, ValidationError
-from schemas import (
-    StudyPreference,
-    StudyPreferenceUpdate,
-    StudySession,
-    StudySessionCreate,
-    StudySessionUpdate,
-    Subject,
-    SubjectCreate,
-    SubjectUpdate,
-)
 
-from .exceptions import (
-    APIAuthenticationError,
-    APIResponseError,
-    APITransportError,
-    APIValidationError,
-)
+from schemas import (StudyPreference, StudyPreferenceUpdate, StudySession,
+                     StudySessionCreate, StudySessionUpdate, Subject,
+                     SubjectCreate, SubjectUpdate)
+
+from .exceptions import (APIAuthenticationError, APIResponseError,
+                         APITransportError, APIValidationError)
 
 T = TypeVar("T")
 
 
 class StudyOpsAPIClient:
+    """A client for interacting with the StudyOps API."""
+
     def __init__(
         self,
         base_url: str,
@@ -42,7 +34,7 @@ class StudyOpsAPIClient:
         if refresh_token:
             cookies["refresh_token"] = refresh_token
 
-        self._http = httpx.AsyncClient(
+        self._http = httpx.AsyncClient(  # initializing the HTTP client with the provided base URL, headers, cookies, and timeout settings
             base_url=base_url.rstrip("/") + "/",
             headers={"Accept": "application/json"},
             cookies=cookies,
@@ -55,16 +47,19 @@ class StudyOpsAPIClient:
             transport=transport,
         )
 
+    # async context manager methods
     async def __aenter__(self) -> "StudyOpsAPIClient":
         return self
 
+    # for exit when error or normal exit
     async def __aexit__(self, *args: object) -> None:
         await self.aclose()
 
+    # for closing the HTTP client
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    async def _request(
+    async def _request(  # abstracted way to make HTTP requests to the StudyOps API, handling errors and validating responses
         self,
         method: str,
         path: str,
@@ -75,7 +70,7 @@ class StudyOpsAPIClient:
                 method,
                 path,
                 **kwargs,
-            )
+            )  # call the request method of the HTTP client with the specified method, path, and any additional keyword arguments
         except httpx.RequestError as exc:
             raise APITransportError(f"Could not reach the StudyOps API: {exc}") from exc
 
@@ -99,15 +94,20 @@ class StudyOpsAPIClient:
         except ValueError:
             return response.text[:500]
 
+    # The method attempts to parse the response as JSON and validate it against the provided adapter. If the response is not valid JSON or does not match the expected structure, it raises an APIValidationError
     @staticmethod
-    def _validate(response: httpx.Response, adapter: TypeAdapter[T]) -> T:
+    def _validate(
+        response: httpx.Response, adapter: TypeAdapter[T]
+    ) -> (
+        T
+    ):  # adapter is expected to be a TypeAdapter instance that defines the expected data structure for the response.
         try:
             data = response.json()
         except ValueError as exc:
             raise APIValidationError("StudyOps API returned invalid JSON") from exc
 
         try:
-            return adapter.validate_python(data)
+            return adapter.validate_python(data)  # uses the adpter validation method
         except ValidationError as exc:
             raise APIValidationError(
                 f"Unexpected StudyOps API response: {exc}"
@@ -115,14 +115,18 @@ class StudyOpsAPIClient:
 
     async def list_subjects(self) -> list[Subject]:
         response = await self._request("GET", "subject/")
-        return self._validate(response, TypeAdapter(list[Subject]))
+        return self._validate(
+            response, TypeAdapter(list[Subject])
+        )  # sends a get request to subject then validates and returns the response as a list
 
     async def get_subject(self, subject_id: int) -> Subject:
         response = await self._request(
             "GET",
             f"subject/{subject_id}/",
         )
-        return self._validate(response, TypeAdapter(Subject))
+        return self._validate(
+            response, TypeAdapter(Subject)
+        )  # sends a get request to subject with the specified id then validates and returns the response as a Subject object
 
     async def create_subject(
         self,
@@ -136,7 +140,9 @@ class StudyOpsAPIClient:
                 exclude_none=True,
             ),
         )
-        return self._validate(response, TypeAdapter(Subject))
+        return self._validate(
+            response, TypeAdapter(Subject)
+        )  # sends a post request to create a new subject then validates and returns the response as a Subject object
 
     async def update_subject(
         self,
@@ -148,10 +154,12 @@ class StudyOpsAPIClient:
             f"subject/{subject_id}/",
             json=changes.model_dump(
                 mode="json",
-                exclude_unset=True,
+                exclude_unset=True,  # remove anything that is not set to avoid sending unnecessary data in the request
             ),
         )
-        return self._validate(response, TypeAdapter(Subject))
+        return self._validate(
+            response, TypeAdapter(Subject)
+        )  # sends a patch request to update the subject with the specified id then validates and returns the response as a Subject object
 
     async def delete_subject(self, subject_id: int) -> None:
         await self._request(
@@ -161,14 +169,18 @@ class StudyOpsAPIClient:
 
     async def list_sessions(self) -> list[StudySession]:
         response = await self._request("GET", "study_session/")
-        return self._validate(response, TypeAdapter(list[StudySession]))
+        return self._validate(
+            response, TypeAdapter(list[StudySession])
+        )  # sends a get request to study_session then validates and returns the response as a list of StudySession objects
 
     async def get_session(self, session_id: int) -> StudySession:
         response = await self._request(
             "GET",
             f"study_session/{session_id}/",
         )
-        return self._validate(response, TypeAdapter(StudySession))
+        return self._validate(
+            response, TypeAdapter(StudySession)
+        )  # sends a get request to study_session with the specified id then validates and returns the response as a StudySession object
 
     async def create_session(
         self,
@@ -182,13 +194,15 @@ class StudyOpsAPIClient:
                 exclude_none=True,
             ),
         )
-        return self._validate(response, TypeAdapter(StudySession))
+        return self._validate(
+            response, TypeAdapter(StudySession)
+        )  # sends a post request to create a new study session then validates and returns the response as a StudySession object
 
     async def delete_session(self, session_id: int) -> None:
         await self._request(
             "DELETE",
             f"study_session/{session_id}/",
-        )
+        )  # sends a delete request to delete the study session with the specified id
 
     async def update_session(
         self,
@@ -203,11 +217,15 @@ class StudyOpsAPIClient:
                 exclude_unset=True,
             ),
         )
-        return self._validate(response, TypeAdapter(StudySession))
+        return self._validate(
+            response, TypeAdapter(StudySession)
+        )  # sends a patch request to update the study session with the specified id then validates and returns the response as a StudySession object
 
     async def get_preferences(self) -> StudyPreference:
         response = await self._request("GET", "study_preference/me")
-        return self._validate(response, TypeAdapter(StudyPreference))
+        return self._validate(
+            response, TypeAdapter(StudyPreference)
+        )  # sends a get request to retrieve the current user's study preferences then validates and returns the response as a StudyPreference object
 
     async def update_preferences(
         self,
@@ -221,4 +239,6 @@ class StudyOpsAPIClient:
                 exclude_unset=True,
             ),
         )
-        return self._validate(response, TypeAdapter(StudyPreference))
+        return self._validate(
+            response, TypeAdapter(StudyPreference)
+        )  # sends a patch request to update the current user's study preferences then validates and returns the response as a StudyPreference object
