@@ -7,6 +7,7 @@ from api_client.client import StudyOpsAPIClient
 from api_client.exceptions import APIResponseError
 from schemas.study_preference import StudyPreferenceUpdate
 from schemas.study_session import StudySessionCreate, StudySessionUpdate
+from schemas.study_task import StudyTaskCreate, StudyTaskUpdate
 from schemas.subject import SubjectCreate
 
 
@@ -62,6 +63,25 @@ def preference_response_data(
         "preferred_session_minutes": preferred_session_minutes,
         "buffer_minutes": buffer_minutes,
     }
+
+
+def study_task_response_data(**changes) -> dict:
+    data = {
+        "id": 4,
+        "user": 10,
+        "subject": 2,
+        "title": "Complete Programming Assignment",
+        "description": "Implement the required features and write unit tests.",
+        "task_type": "assignment",
+        "task_status": "todo",
+        "task_priority": "high",
+        "estimated_minutes": 90,
+        "due_date": "2026-09-10T20:00:00Z",
+        "created_at": "2026-08-29T10:00:00Z",
+        "updated_at": "2026-08-29T10:00:00Z",
+    }
+    data.update(changes) # takes key value kwarg and cahnges the default values in data dict
+    return data
 
 
 @pytest.mark.asyncio
@@ -431,3 +451,130 @@ async def test_update_preferences():
 
     assert preferences.preferred_session_minutes == 50
     assert preferences.buffer_minutes == 15
+
+
+@pytest.mark.asyncio
+async def test_list_study_tasks():
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/api/study_task/"
+        return httpx.Response(200, json=[study_task_response_data()])
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        tasks = await api.list_study_tasks()
+
+    assert len(tasks) == 1
+    assert tasks[0].id == 4
+    assert tasks[0].task_priority.value == "high"
+
+
+@pytest.mark.asyncio
+async def test_get_study_task():
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/api/study_task/4/"
+        return httpx.Response(200, json=study_task_response_data())
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        task = await api.get_study_task(study_task_id=4)
+
+    assert task.id == 4
+    assert task.subject == 2
+    assert task.title == "Complete Programming Assignment"
+
+
+@pytest.mark.asyncio
+async def test_create_study_task():
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/api/study_task/"
+
+        payload = json.loads(request.content)
+        assert payload["subject"] == 2
+        assert payload["title"] == "Review graph algorithms"
+
+        return httpx.Response(
+            201,
+            json=study_task_response_data(
+                title="Review graph algorithms",
+                description="Review BFS and DFS, then solve practice problems.",
+                task_type="study",
+                task_priority="medium",
+                estimated_minutes=60,
+            ), #returned updated data from the API with the new title and description
+        )
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        task = await api.create_study_task(
+            StudyTaskCreate(
+                subject=2,
+                title="Review graph algorithms",
+                description="Review BFS and DFS, then solve practice problems.",
+                task_type="study",
+                estimated_minutes=60,
+                due_date="2026-09-10T20:00:00Z",
+            )
+        )
+
+    assert task.id == 4
+    assert task.title == "Review graph algorithms"
+    assert task.task_status.value == "todo"
+
+
+@pytest.mark.asyncio
+async def test_update_study_task():
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "PATCH"
+        assert request.url.path == "/api/study_task/4/"
+        assert json.loads(request.content) == {
+            "task_status": "done",
+            "task_priority": "low",
+        } # checking if the request body is correct (serialized to JSON)
+
+        return httpx.Response(
+            200,
+            json=study_task_response_data(
+                task_status="done",
+                task_priority="low",
+            ), # returned updated data from the API with the new task_status and task_priority
+        )
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        task = await api.update_study_task(
+            study_task_id=4,
+            changes=StudyTaskUpdate(
+                task_status="done",
+                task_priority="low",
+            ),
+        )
+
+    assert task.task_status.value == "done"
+    assert task.task_priority.value == "low"
+
+
+@pytest.mark.asyncio
+async def test_delete_study_task():
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "DELETE"
+        assert request.url.path == "/api/study_task/4/"
+        return httpx.Response(204)
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        result = await api.delete_study_task(study_task_id=4) # calling the delete_study_task method of the API client
+
+    assert result is None

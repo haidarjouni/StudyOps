@@ -6,8 +6,9 @@ import httpx
 from pydantic import TypeAdapter, ValidationError
 
 from schemas import (StudyPreference, StudyPreferenceUpdate, StudySession,
-                     StudySessionCreate, StudySessionUpdate, Subject,
-                     SubjectCreate, SubjectUpdate)
+                     StudySessionCreate, StudySessionUpdate, StudyTask,
+                     StudyTaskCreate, StudyTaskUpdate, Subject, SubjectCreate,
+                     SubjectUpdate)
 
 from .exceptions import (APIAuthenticationError, APIResponseError,
                          APITransportError, APIValidationError)
@@ -242,3 +243,65 @@ class StudyOpsAPIClient:
         return self._validate(
             response, TypeAdapter(StudyPreference)
         )  # sends a patch request to update the current user's study preferences then validates and returns the response as a StudyPreference object
+
+    async def list_study_tasks(
+        self,
+    ) -> list[StudyTask]:
+        response = await self._request("GET", "study_task/")
+        return self._validate(
+            response, TypeAdapter(list[StudyTask])
+        )  # sends a get request to retrieve the list of study tasks then validates and returns the response as a list of StudyTask objects
+
+    async def get_study_task(
+        self,
+        study_task_id: int,
+    ) -> StudyTask:
+        response = await self._request(
+            "GET",
+            f"study_task/{study_task_id}/",
+        )
+        return self._validate(
+            response, TypeAdapter(StudyTask)
+        )  # sends a get request to retrieve the study task with the specified id then validates and returns the response as a StudyTask object
+
+    async def create_study_task(
+        self,
+        study_task: StudyTaskCreate,
+    ) -> StudyTask:
+        response = await self._request(
+            "POST",
+            "study_task/",
+            json=study_task.model_dump(
+                mode="json",
+                exclude_none=True,
+            ),
+        )
+        return self._validate(
+            response, TypeAdapter(StudyTask)
+        )  # sends a post request to create a new study task then validates and returns the response as a StudyTask object
+
+    async def update_study_task(
+        self,
+        study_task_id: int,
+        changes: StudyTaskUpdate,
+    ) -> StudyTask:
+        response = await self._request(
+            "PATCH",
+            f"study_task/{study_task_id}/",
+            json=changes.model_dump(
+                mode="json",
+                exclude_unset=True,
+            ),
+        )
+        return self._validate(
+            response, TypeAdapter(StudyTask)
+        )  # sends a patch request to update the study task with the specified id then validates and returns the response as a StudyTask object
+
+    async def delete_study_task(
+        self,
+        study_task_id: int,
+    ) -> None:
+        await self._request(
+            "DELETE",
+            f"study_task/{study_task_id}/",
+        )  # sends a delete request to delete the study task with the specified id
