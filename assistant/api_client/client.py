@@ -72,16 +72,23 @@ class StudyOpsAPIClient:
                 path,
                 **kwargs,
             )  # call the request method of the HTTP client with the specified method, path, and any additional keyword arguments
-        except httpx.RequestError as exc:
+
+        except (
+            httpx.RequestError
+        ) as exc:  # if http error/ timeout/ connection error in request, raise APITransportError with the error message
             raise APITransportError(f"Could not reach the StudyOps API: {exc}") from exc
 
-        if response.status_code == 401:
+        if (
+            response.status_code == 401
+        ):  # 401 unauthorized error, raise APIAuthenticationError indicating that the authentication is missing or expired
             raise APIAuthenticationError(
                 "StudyOps authentication is missing or expired"
             )
 
-        if response.is_error:
-            raise APIResponseError(
+        if (
+            response.is_error
+        ):  # if api error found other than 401, raise APIResponseError with the status code and error detail extracted from the response
+            raise APIResponseError(  # raise APIResponseError with the status code and error detail extracted from the response
                 status_code=response.status_code,
                 detail=self._error_detail(response),
             )
@@ -91,9 +98,13 @@ class StudyOpsAPIClient:
     @staticmethod
     def _error_detail(response: httpx.Response) -> Any:
         try:
-            return response.json()
+            return (
+                response.json()
+            )  # attempts to parse the response as JSON and return the parsed data
         except ValueError:
-            return response.text[:500]
+            return response.text[
+                :500
+            ]  # if failed to parse as JSON, return the first 500 characters of the response text as a fallback error detail
 
     # The method attempts to parse the response as JSON and validate it against the provided adapter. If the response is not valid JSON or does not match the expected structure, it raises an APIValidationError
     @staticmethod
@@ -105,12 +116,14 @@ class StudyOpsAPIClient:
         try:
             data = response.json()
         except ValueError as exc:
-            raise APIValidationError("StudyOps API returned invalid JSON") from exc
+            raise APIValidationError(
+                "StudyOps API returned invalid JSON"
+            ) from exc  # if the response is not valid JSON, raise an APIValidationError indicating that the StudyOps API returned invalid JSON
 
         try:
             return adapter.validate_python(data)  # uses the adpter validation method
         except ValidationError as exc:
-            raise APIValidationError(
+            raise APIValidationError(  # if the response data does not match the expected structure defined by the adapter, raise an APIValidationError with a message indicating that the StudyOps API response was unexpected
                 f"Unexpected StudyOps API response: {exc}"
             ) from exc
 

@@ -80,7 +80,9 @@ def study_task_response_data(**changes) -> dict:
         "created_at": "2026-08-29T10:00:00Z",
         "updated_at": "2026-08-29T10:00:00Z",
     }
-    data.update(changes) # takes key value kwarg and cahnges the default values in data dict
+    data.update(
+        changes
+    )  # takes key value kwarg and cahnges the default values in data dict
     return data
 
 
@@ -507,7 +509,7 @@ async def test_create_study_task():
                 task_type="study",
                 task_priority="medium",
                 estimated_minutes=60,
-            ), #returned updated data from the API with the new title and description
+            ),  # returned updated data from the API with the new title and description
         )
 
     async with StudyOpsAPIClient(
@@ -538,14 +540,14 @@ async def test_update_study_task():
         assert json.loads(request.content) == {
             "task_status": "done",
             "task_priority": "low",
-        } # checking if the request body is correct (serialized to JSON)
+        }  # checking if the request body is correct (serialized to JSON)
 
         return httpx.Response(
             200,
             json=study_task_response_data(
                 task_status="done",
                 task_priority="low",
-            ), # returned updated data from the API with the new task_status and task_priority
+            ),  # returned updated data from the API with the new task_status and task_priority
         )
 
     async with StudyOpsAPIClient(
@@ -575,6 +577,8 @@ async def test_delete_study_task():
         "http://test/api/",
         transport=httpx.MockTransport(fake_api),
     ) as api:
-        result = await api.delete_study_task(study_task_id=4) # calling the delete_study_task method of the API client
+        result = await api.delete_study_task(
+            study_task_id=4
+        )  # calling the delete_study_task method of the API client
 
     assert result is None
