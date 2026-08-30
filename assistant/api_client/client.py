@@ -181,8 +181,19 @@ class StudyOpsAPIClient:
             f"subject/{subject_id}/",
         )
 
-    async def list_sessions(self) -> list[StudySession]:
-        response = await self._request("GET", "study_session/")
+    async def list_sessions(self,*,
+        status: str | None = None,
+        subject: int | None = None,
+        start_from: str | None = None,
+        start_to: str | None = None,
+    ) -> list[StudySession]:
+        params = {
+            "status": status,
+            "subject": subject,
+            "start_at__gte": start_from,
+            "start_at__lte": start_to,
+        }
+        response = await self._request("GET", "study_session/", params={key: value for key,value in params.items() if value is not None})
         return self._validate(
             response, TypeAdapter(list[StudySession])
         )  # sends a get request to study_session then validates and returns the response as a list of StudySession objects
@@ -259,8 +270,19 @@ class StudyOpsAPIClient:
 
     async def list_study_tasks(
         self,
+        *,
+        task_status: str | None = None,
+        subject: int | None = None,
+        due_from: str | None = None,
+        due_to: str | None = None,
     ) -> list[StudyTask]:
-        response = await self._request("GET", "study_task/")
+        params = {
+            "task_status": task_status,
+            "subject": subject,
+            "due_date__gte": due_from,
+            "due_date__lte": due_to,
+        }
+        response = await self._request("GET", "study_task/", params={key: value for key, value in params.items() if value is not None})  # sends a get request to retrieve the list of study tasks with optional filtering parameters for task status, subject, and due date range
         return self._validate(
             response, TypeAdapter(list[StudyTask])
         )  # sends a get request to retrieve the list of study tasks then validates and returns the response as a list of StudyTask objects

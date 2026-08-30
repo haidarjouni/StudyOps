@@ -244,6 +244,34 @@ async def test_list_sessions():
 
 
 @pytest.mark.asyncio
+async def test_list_sessions_with_filters():
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/api/study_session/"
+        assert dict(request.url.params) == {
+            "status": "scheduled",
+            "subject": "2",
+            "start_at__gte": "2026-08-28T00:00:00Z",
+            "start_at__lte": "2026-08-28T23:59:59Z",
+        }
+        return httpx.Response(200, json=[session_response_data()])
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        sessions = await api.list_sessions(
+            status="scheduled",
+            subject=2,
+            start_from="2026-08-28T00:00:00Z",
+            start_to="2026-08-28T23:59:59Z",
+        )
+
+    assert len(sessions) == 1
+    assert sessions[0].id == 1
+
+
+@pytest.mark.asyncio
 async def test_get_study_session():
     def fake_api(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -471,6 +499,34 @@ async def test_list_study_tasks():
     assert len(tasks) == 1
     assert tasks[0].id == 4
     assert tasks[0].task_priority.value == "high"
+
+
+@pytest.mark.asyncio
+async def test_list_study_tasks_with_filters():
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "GET"
+        assert request.url.path == "/api/study_task/"
+        assert dict(request.url.params) == {
+            "task_status": "todo",
+            "subject": "2",
+            "due_date__gte": "2026-09-01T00:00:00Z",
+            "due_date__lte": "2026-09-30T23:59:59Z",
+        }
+        return httpx.Response(200, json=[study_task_response_data()])
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        tasks = await api.list_study_tasks(
+            task_status="todo",
+            subject=2,
+            due_from="2026-09-01T00:00:00Z",
+            due_to="2026-09-30T23:59:59Z",
+        )
+
+    assert len(tasks) == 1
+    assert tasks[0].id == 4
 
 
 @pytest.mark.asyncio
