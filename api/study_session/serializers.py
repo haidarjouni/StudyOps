@@ -123,9 +123,7 @@ class StudySessionSerializer(serializers.ModelSerializer):
             ).exclude(status=StudySession.SessionStatus.CANCELLED)
 
             if self.instance is not None:
-                overlapping_sessions = overlapping_sessions.exclude(
-                    pk=self.instance.pk
-                )
+                overlapping_sessions = overlapping_sessions.exclude(pk=self.instance.pk)
 
             if overlapping_sessions.exists():
                 errors["start_at"] = "This session overlaps an existing session."

@@ -1,6 +1,8 @@
+from django_filters import rest_framework as filters
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 
+from .filters import StudySessionFilter
 from .models import StudySession
 from .serializers import StudySessionSerializer
 
@@ -8,6 +10,8 @@ from .serializers import StudySessionSerializer
 class StudySessionViewSet(ModelViewSet):
     serializer_class = StudySessionSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = StudySessionFilter
 
     def get_queryset(self):
         return (

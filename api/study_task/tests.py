@@ -1,11 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.test import APITestCase
+from subject.models import Subject
 
 from study_task.models import StudyTask
-from subject.models import Subject
-from django.utils.dateparse import parse_datetime
 
 User = get_user_model()
 
@@ -98,7 +98,6 @@ class StudyTaskViewTestCase(APITestCase):
         self.assertFalse(StudyTask.objects.filter(pk=self.task.pk).exists())
         self.assertTrue(StudyTask.objects.filter(pk=self.other_task.pk).exists())
 
-
     def test_update_study_task(self):
         update_data = {
             "subject": self.subject.pk,
@@ -140,12 +139,12 @@ class StudyTaskViewTestCase(APITestCase):
         self.client.force_authenticate(user=None)
         response = self.client.get(reverse("studytask-list"))
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        
+
     def test_access_other_users_task(self):
         self.client.force_authenticate(user=self.other_user)
         response = self.client.get(reverse("studytask-detail", args=[self.task.pk]))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        
+
     def test_create_task_with_other_users_subject(self):
         create_data = {
             "subject": self.other_subject.pk,
@@ -164,3 +163,24 @@ class StudyTaskViewTestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("subject", response.data)
+
+    def test_filtering_by_due_date(self):
+        response = self.client.get(
+            reverse("studytask-list"),
+            {
+                "due_date__gte": "2026-09-01T00:00:00Z",
+                "due_date__lte": "2026-09-30T23:59:59Z",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.task.pk)
+
+    def test_filtering_by_task_status(self):
+        response = self.client.get(
+            reverse("studytask-list"),
+            {"task_status": "todo"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.task.pk)

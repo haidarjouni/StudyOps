@@ -281,3 +281,33 @@ class StudySessionViewSetTests(APITestCase):
             response.status_code,
             status.HTTP_401_UNAUTHORIZED,
         )
+
+    def test_filtering_by_date(self):
+
+        response = self.client.get(
+            reverse("study_session-list"),
+            {
+                "start_at__gte": "2026-09-10T00:00:00Z",
+                "end_at__lte": "2026-09-10T23:59:59Z",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.session.id)
+
+    def test_filtering_by_subject(self):
+        response = self.client.get(
+            reverse("study_session-list"),
+            {"subject": self.subject.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.session.id)
+
+    def test_filtering_fail(self):
+        response = self.client.get(
+            reverse("study_session-list"),
+            {"subject": self.other_subject.id},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
