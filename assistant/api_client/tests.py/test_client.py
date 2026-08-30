@@ -251,8 +251,8 @@ async def test_list_sessions_with_filters():
         assert dict(request.url.params) == {
             "status": "scheduled",
             "subject": "2",
-            "start_at__gte": "2026-08-28T00:00:00Z",
-            "start_at__lte": "2026-08-28T23:59:59Z",
+            "end_at__gt": "2026-08-28T00:00:00Z",
+            "start_at__lt": "2026-08-28T23:59:59Z",
         }
         return httpx.Response(200, json=[session_response_data()])
 
@@ -263,8 +263,8 @@ async def test_list_sessions_with_filters():
         sessions = await api.list_sessions(
             status="scheduled",
             subject=2,
-            start_from="2026-08-28T00:00:00Z",
-            start_to="2026-08-28T23:59:59Z",
+            window_start="2026-08-28T00:00:00Z",
+            window_end="2026-08-28T23:59:59Z",
         )
 
     assert len(sessions) == 1

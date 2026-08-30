@@ -45,7 +45,7 @@ services:
     depends_on:
       - api
     environment:
-      BASE_DRF_API: "${BASE_DRF_API:-http://api:8000/api/v1}"
+      BASE_DRF_API: "${BASE_DRF_API:-http://api:8000/api/}"
       OLLAMA_URL: "${OLLAMA_URL:-http://localhost:11434}"
 volumes:
   postgres_data:

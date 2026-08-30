@@ -181,19 +181,25 @@ class StudyOpsAPIClient:
             f"subject/{subject_id}/",
         )
 
-    async def list_sessions(self,*,
+    async def list_sessions(
+        self,
+        *,
         status: str | None = None,
         subject: int | None = None,
-        start_from: str | None = None,
-        start_to: str | None = None,
+        window_start: str | None = None,
+        window_end: str | None = None,
     ) -> list[StudySession]:
         params = {
             "status": status,
             "subject": subject,
-            "start_at__gte": start_from,
-            "start_at__lte": start_to,
+            "end_at__gt": window_start,
+            "start_at__lt": window_end,
         }
-        response = await self._request("GET", "study_session/", params={key: value for key,value in params.items() if value is not None})
+        response = await self._request(
+            "GET",
+            "study_session/",
+            params={key: value for key, value in params.items() if value is not None},
+        )
         return self._validate(
             response, TypeAdapter(list[StudySession])
         )  # sends a get request to study_session then validates and returns the response as a list of StudySession objects

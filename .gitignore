@@ -211,3 +211,4 @@ Thumbs.db
 tmp/
 AI/
 /output
+assistant/api_client/tests.py/test_client.py
