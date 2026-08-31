@@ -12,7 +12,7 @@ from nodes import get_context_needed
 config = Config()
 
 model = ChatOllama(
-    model="qwen3.5:4b",
+    model="qwen3.5:9b",
     temperature=0,
 )  # create the model
 
