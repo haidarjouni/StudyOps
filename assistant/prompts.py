@@ -21,16 +21,18 @@ Available context sources:
 Selection rules:
 
 - Review both the conversation and the context already available below.
-- Request only sources whose information is missing and relevant.
-- Never request a source whose required information is already available.
-- Do not request every source by default.
+- Never request information already available.
 - Request each source at most once.
-- If the user mentions an exam or task without identifying its subject, request
-  both tasks and subjects.
-- If the user already supplied enough information, return an empty
-  context_needed list.
-- Give a short, specific reason describing the missing information for every
-  requested source.
+- When creating a new study plan, sessions and preferences are required unless
+  their information is already available.
+- Request tasks when task, exam, deadline, priority, or workload information is
+  required.
+- Request subjects when the subject is unknown or a subject name must be mapped
+  to its database ID.
+- For requests that do not involve creating a study plan, request only relevant
+  sources.
+- Return an empty context_needed list when enough information is available.
+- Give a short, specific reason for every requested source.
 
 Context already available:
 {context}

@@ -38,7 +38,7 @@ async def main():
         {
             "messages": [
                 HumanMessage(
-                    content="I have an exam coming up next week, and I need help creating a study plan. Can you assist me with that?"
+                    content="I have a Data Structures exam coming up next week, and I need help creating a study plan. Can you assist me with that?"
                 )
             ],
             "context_needed": [],
