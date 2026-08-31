@@ -226,3 +226,11 @@ async def list_subjects(
 
     subjects.sort(key=lambda subject: (subject.name.casefold(), subject.id))
     return [_subject_for_model(subject) for subject in subjects]
+
+
+READ_TOOLS = [
+    get_tasks,
+    get_preferences,
+    get_sessions,
+    list_subjects,
+]
