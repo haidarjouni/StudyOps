@@ -147,10 +147,12 @@ async def test_get_tasks_fetches_active_tasks_and_returns_compact_sorted_json(
         )
     )
     due_before = datetime(2026, 9, 7, 23, 59, tzinfo=timezone.utc)
+    due_from = datetime(2026, 8, 31, tzinfo=timezone.utc)
 
     result = await get_tasks.coroutine(
         runtime=runtime,
         subject=2,
+        due_from=due_from,
         due_before=due_before,
     )
 
@@ -161,25 +163,30 @@ async def test_get_tasks_fetches_active_tasks_and_returns_compact_sorted_json(
         {
             "task_status": "todo",
             "subject": 2,
+            "due_from": "2026-08-31T00:00:00+00:00",
             "due_to": "2026-09-07T23:59:00+00:00",
         },
         {
             "task_status": "in_progress",
             "subject": 2,
+            "due_from": "2026-08-31T00:00:00+00:00",
             "due_to": "2026-09-07T23:59:00+00:00",
         },
     ]
 
 
 def test_get_tasks_schema_rejects_a_naive_deadline():
-    with pytest.raises(ValidationError, match="due_before must include a timezone"):
-        GetTasksInput(due_before=datetime(2026, 9, 7, 23, 59))
+    with pytest.raises(ValidationError, match="must include a timezone"):
+        GetTasksInput(
+            due_from=datetime(2026, 8, 31, tzinfo=timezone.utc),
+            due_before=datetime(2026, 9, 7, 23, 59),
+        )
 
 
 def test_runtime_context_is_hidden_from_the_model_schema():
     properties = get_tasks.tool_call_schema.model_json_schema()["properties"]
 
-    assert set(properties) == {"subject", "due_before"}
+    assert set(properties) == {"subject", "due_from", "due_before"}
 
 
 @pytest.mark.asyncio

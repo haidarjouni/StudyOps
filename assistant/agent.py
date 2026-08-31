@@ -6,7 +6,7 @@ from langchain_ollama import ChatOllama
 from langgraph.graph import END, START, StateGraph
 
 from config import Config
-from context import AgentState, ContextCheckOutput
+from context import AgentState, ContextCheckOutput, RequestContext
 from nodes import get_context_needed
 
 config = Config()
@@ -25,7 +25,7 @@ get_context_needed_node = partial(
     context_checker=context_checker,
 )  # since langgraph automatically passes the state to the node function, we can use partial to pass in the context_checker as a fixed argument to the get_context_needed function. This allows us to create a node that only requires the state as input, while still having access to the context_checker.
 
-graph = StateGraph(AgentState)
+graph = StateGraph(AgentState, context_schema=RequestContext)
 graph.add_node("check_context_needed", get_context_needed_node)  # create the node
 graph.add_edge(START, "check_context_needed")  # link from start till that node
 graph.add_edge("check_context_needed", END)  # till that node to end
@@ -44,10 +44,16 @@ async def main():
             "context_needed": [],
             "context": [],
             "errors": [],
-        }
+        },
+        context=RequestContext(
+            access_token=None,
+            refresh_token=None,
+            timezone="Asia/Beirut",
+        ),
     )
 
     print(result["context_needed"])
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

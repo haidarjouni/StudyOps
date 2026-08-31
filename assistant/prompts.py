@@ -5,6 +5,10 @@ Your only job is to determine which context sources are still needed to handle
 the user's current request. Do not create a study plan and do not answer the
 user's request.
 
+The current date and time is {current_datetime} in the user's timezone,
+{timezone}. Resolve relative dates such as "today", "last 7 days", and
+"next week" into explicit timezone-aware timestamps.
+
 Available context sources:
 
 - tasks: The user's unfinished tasks and exams, including titles,
@@ -33,6 +37,7 @@ Selection rules:
   sources.
 - Return an empty context_needed list when enough information is available.
 - Give a short, specific reason for every requested source.
+- For task requests, always set due_from to the supplied current datetime unless the user explicitly asks for historical tasks or specifies a different starting date. A mentioned deadline such as “exam next week” affects due_before, not due_from.
 
 Context already available:
 {context}

@@ -58,20 +58,29 @@ class GetTasksInput(ToolInputModel):
         gt=0,
         description="Only return active tasks belonging to this subject ID.",
     )
-    due_before: datetime | None = Field(
-        default=None,
+    due_from: datetime = Field(
         description=(
-            "Latest deadline to include, as a timezone-aware timestamp. "
-            "Leave empty when every active task is needed."
+            "Earliest deadline to include, as a timezone-aware timestamp."
+        ),
+    )
+    due_before: datetime = Field(
+        description=(
+            "Latest deadline to include, as a timezone-aware timestamp."
         ),
     )
 
-    @field_validator("due_before")
+    @field_validator("due_from", "due_before")
     @classmethod
-    def require_timezone(cls, value: datetime | None) -> datetime | None:
-        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
-            raise ValueError("due_before must include a timezone")
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("task deadline filters must include a timezone")
         return value
+
+    @model_validator(mode="after")
+    def check_due_range(self):
+        if self.due_from > self.due_before:
+            raise ValueError("due_before must not be earlier than due_from")
+        return self
 
 
 def _task_for_model(task: StudyTask) -> dict[str, Any]:
@@ -111,17 +120,19 @@ def _session_for_model(session: StudySession) -> dict[str, Any]:
 @tool(args_schema=GetTasksInput)
 async def get_tasks(
     runtime: ToolRuntime[RequestContext],
+    due_from: datetime,
+    due_before: datetime,
     subject: int | None = None,
-    due_before: datetime | None = None,
 ) -> list[dict[str, Any]]:
     """Get the current user's unfinished tasks for study planning.
 
-    Returns both todo and in-progress tasks, including overdue tasks. Use
-    due_before to limit the result to deadlines within a planning horizon.
+    Returns both todo and in-progress tasks whose deadlines fall within the
+    inclusive due_from and due_before range.
     This tool only reads data; it never creates or changes a task.
     """
 
-    due_to = due_before.isoformat() if due_before is not None else None
+    due_from_value = due_from.isoformat()
+    due_to = due_before.isoformat()
     settings = Config()
 
     async with StudyOpsAPIClient(
@@ -136,6 +147,7 @@ async def get_tasks(
                 await client.list_study_tasks(
                     task_status=status.value,
                     subject=subject,
+                    due_from=due_from_value,
                     due_to=due_to,
                 )
             )
