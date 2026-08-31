@@ -288,7 +288,11 @@ class StudyOpsAPIClient:
             "due_date__gte": due_from,
             "due_date__lte": due_to,
         }
-        response = await self._request("GET", "study_task/", params={key: value for key, value in params.items() if value is not None})  # sends a get request to retrieve the list of study tasks with optional filtering parameters for task status, subject, and due date range
+        response = await self._request(
+            "GET",
+            "study_task/",
+            params={key: value for key, value in params.items() if value is not None},
+        )  # sends a get request to retrieve the list of study tasks with optional filtering parameters for task status, subject, and due date range
         return self._validate(
             response, TypeAdapter(list[StudyTask])
         )  # sends a get request to retrieve the list of study tasks then validates and returns the response as a list of StudyTask objects

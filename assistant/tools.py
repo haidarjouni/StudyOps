@@ -69,9 +69,7 @@ class GetTasksInput(ToolInputModel):
     @field_validator("due_before")
     @classmethod
     def require_timezone(cls, value: datetime | None) -> datetime | None:
-        if value is not None and (
-            value.tzinfo is None or value.utcoffset() is None
-        ):
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
             raise ValueError("due_before must include a timezone")
         return value
 
@@ -82,7 +80,7 @@ def _task_for_model(task: StudyTask) -> dict[str, Any]:
     return task.model_dump(
         mode="json",
         exclude={"user", "created_at", "updated_at"},
-)
+    )
 
 
 def _session_for_model(session: StudySession) -> dict[str, Any]:
