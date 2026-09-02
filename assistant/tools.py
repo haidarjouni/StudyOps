@@ -59,14 +59,10 @@ class GetTasksInput(ToolInputModel):
         description="Only return active tasks belonging to this subject ID.",
     )
     due_from: datetime = Field(
-        description=(
-            "Earliest deadline to include, as a timezone-aware timestamp."
-        ),
+        description=("Earliest deadline to include, as a timezone-aware timestamp."),
     )
     due_before: datetime = Field(
-        description=(
-            "Latest deadline to include, as a timezone-aware timestamp."
-        ),
+        description=("Latest deadline to include, as a timezone-aware timestamp."),
     )
 
     @field_validator("due_from", "due_before")

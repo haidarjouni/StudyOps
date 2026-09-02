@@ -5,12 +5,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class TaskContextRequest(BaseModel):
-    source: Literal["tasks"] = Field(
-        description="Request the user's study tasks."
-    )
-    reason: str = Field(
-        description="Short explanation of why task data is needed."
-    )
+    source: Literal["tasks"] = Field(description="Request the user's study tasks.")
+    reason: str = Field(description="Short explanation of why task data is needed.")
     subject: int | None = Field(
         default=None,
         description=(
@@ -51,9 +47,7 @@ class SessionContextRequest(BaseModel):
     source: Literal["sessions"] = Field(
         description="Request the user's scheduled study sessions."
     )
-    reason: str = Field(
-        description="Short explanation of why session data is needed."
-    )
+    reason: str = Field(description="Short explanation of why session data is needed.")
     subject: int | None = Field(
         default=None,
         description=(
@@ -89,24 +83,44 @@ class SessionContextRequest(BaseModel):
         return self
 
 
-class SimpleContextRequest(BaseModel):
-    source: Literal["preferences", "subjects"] = Field(
-        description="The context source that must be retrieved."
+class PreferenceContextRequest(BaseModel):
+    source: Literal["preferences"] = Field(
+        description="Request the user's study preferences."
     )
-    # Literal sets the specific valid values for the source field, ensuring
-    # that only valid context sources are accepted.
-    reason: str = Field(
-        description="Short explanation of why this context source is needed."
-    )
+    reason: str = Field(description="Short explanation of why preferences are needed.")
+
+
+class SubjectContextRequest(BaseModel):
+    source: Literal["subjects"] = Field(description="Request the user's subjects.")
+    reason: str = Field(description="Short explanation of why subject data is needed.")
 
 
 ContextRequest = Annotated[
-    TaskContextRequest | SessionContextRequest | SimpleContextRequest,
+    TaskContextRequest
+    | SessionContextRequest
+    | PreferenceContextRequest
+    | SubjectContextRequest,
     Field(discriminator="source"),
 ]
-# This annotated type can be any of the three context request types. The
+# This annotated type can be any of the four context request types. The
 # discriminator field determines which request type is being used.
+
+ContextSource = Literal[
+    "tasks",
+    "sessions",
+    "preferences",
+    "subjects",
+]
 
 
 class ContextCheckOutput(BaseModel):
-    context_needed: list[ContextRequest]
+    context_needed: dict[ContextSource, ContextRequest]
+
+    @model_validator(mode="after")
+    def require_matching_sources(self):
+        for source, request in self.context_needed.items():
+            if source != request.source:
+                raise ValueError(
+                    f"source '{source}' does not match request source '{request.source}'"
+                )
+        return self

@@ -13,6 +13,13 @@ from state import AgentState
 
 config = Config()
 
+
+def route_context_requests(state: AgentState) -> list[str]:
+    return list(state.context_needed.keys()) or [
+        END
+    ]  # return a list of the context sources needed by the agent, which is a list of strings. This is used to determine which nodes to route to next based on the context needed by the agent.
+
+
 model = ChatOllama(
     model="qwen3.5:9b",
     temperature=0,
@@ -29,8 +36,12 @@ get_context_needed_node = partial(
 
 graph = StateGraph(AgentState, context_schema=RequestContext)
 graph.add_node("check_context_needed", get_context_needed_node)  # create the node
-graph.add_edge(START, "check_context_needed")  # link from start till that node
-graph.add_edge("check_context_needed", END)  # till that node to end
+graph.add_edge(
+    START, "check_context_needed"
+)  # add an edge from the start node to the check_context_needed node
+graph.add_edge(
+    "check_context_needed", END
+)  # add an edge from the check_context_needed node to the route_context_requests function, which will determine the next node based on the context needed by the agent
 
 app = graph.compile()  # compile the graph into an app that can be run
 
