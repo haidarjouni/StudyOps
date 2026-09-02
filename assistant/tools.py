@@ -201,6 +201,7 @@ async def get_sessions(
 
     sessions.sort(key=lambda session: (session.start_at, session.id))
 
+    # Return only the fields the model needs for planning.
     return [_session_for_model(session) for session in sessions]
 
 
@@ -231,6 +232,7 @@ async def list_subjects(
         subjects = await client.list_subjects()
 
     subjects.sort(key=lambda subject: (subject.name.casefold(), subject.id))
+    # Return only the fields the model needs for planning.
     return [_subject_for_model(subject) for subject in subjects]
 
 

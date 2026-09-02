@@ -3,48 +3,37 @@ from functools import partial
 
 from langchain.messages import HumanMessage
 from langchain_ollama import ChatOllama
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import START, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
 
 from config import Config
-from nodes import get_context_needed
+from nodes import call_model
 from runtime_context import RequestContext
-from schemas.context_requests import ContextCheckOutput
 from state import AgentState
+from tools import READ_TOOLS
 
 config = Config()
-
-
-def route_context_requests(state: AgentState) -> list[str]:
-    return list(state.context_needed.keys()) or [
-        END
-    ]  # return a list of the context sources needed by the agent, which is a list of strings. This is used to determine which nodes to route to next based on the context needed by the agent.
-
 
 model = ChatOllama(
     model="qwen3.5:9b",
     temperature=0,
+    base_url=config.ollama_url,
 )  # create the model
 
-context_checker = model.with_structured_output(
-    ContextCheckOutput
-)  # create output parser
+model_with_tools = model.bind_tools(READ_TOOLS)
 
-get_context_needed_node = partial(
-    get_context_needed,
-    context_checker=context_checker,
-)  # since langgraph automatically passes the state to the node function, we can use partial to pass in the context_checker as a fixed argument to the get_context_needed function. This allows us to create a node that only requires the state as input, while still having access to the context_checker.
+assistant_node = partial(call_model, model=model_with_tools)
 
 graph = StateGraph(AgentState, context_schema=RequestContext)
-graph.add_node("check_context_needed", get_context_needed_node)  # create the node
-graph.add_edge(
-    START, "check_context_needed"
-)  # add an edge from the start node to the check_context_needed node
-graph.add_edge(
-    "check_context_needed", END
-)  # add an edge from the check_context_needed node to the route_context_requests function, which will determine the next node based on the context needed by the agent
+graph.add_node("assistant", assistant_node)
+graph.add_node("tools", ToolNode(READ_TOOLS))
+graph.add_edge(START, "assistant")
+graph.add_conditional_edges("assistant", tools_condition)
+graph.add_edge("tools", "assistant")
 
 app = graph.compile()  # compile the graph into an app that can be run
 
+# print(app.get_graph().draw_mermaid())
 
 async def main():
     result = await app.ainvoke(
@@ -54,9 +43,6 @@ async def main():
                     content="I have a Data Structures exam coming up next week, and I need help creating a study plan. Can you assist me with that?"
                 )
             ],
-            "context_needed": [],
-            "context": [],
-            "errors": [],
         },
         context=RequestContext(
             access_token=None,
@@ -65,7 +51,7 @@ async def main():
         ),
     )
 
-    print(result["context_needed"])
+    print(result["messages"][-1].content)
 
 
 if __name__ == "__main__":
