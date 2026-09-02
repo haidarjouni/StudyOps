@@ -7,7 +7,7 @@ from langgraph.graph import START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from config import Config
-from nodes import call_model
+from nodes import retrieve_context
 from runtime_context import RequestContext
 from state import AgentState
 from tools import READ_TOOLS
@@ -24,14 +24,14 @@ model = ChatOllama(
 
 model_with_tools = model.bind_tools(READ_TOOLS)
 
-assistant_node = partial(call_model, model=model_with_tools)
+retrieve_context_node = partial(retrieve_context, model=model_with_tools)
 
 graph = StateGraph(AgentState, context_schema=RequestContext)
-graph.add_node("assistant", assistant_node)
+graph.add_node("retrieve_context", retrieve_context_node)
 graph.add_node("tools", ToolNode(READ_TOOLS))
-graph.add_edge(START, "assistant")
-graph.add_conditional_edges("assistant", tools_condition)
-graph.add_edge("tools", "assistant")
+graph.add_edge(START, "retrieve_context")
+graph.add_conditional_edges("retrieve_context", tools_condition)
+graph.add_edge("tools", "retrieve_context")
 
 app = graph.compile()  # compile the graph into an app that can be run
 

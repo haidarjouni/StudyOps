@@ -4,17 +4,17 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from langchain.messages import SystemMessage
 from langgraph.runtime import Runtime
 
-from prompts import ASSISTANT_PROMPT
+from prompts import CONTEXT_RETRIEVAL_PROMPT
 from runtime_context import RequestContext
 from state import AgentState
 
 
-async def call_model(
+async def retrieve_context(
     state: AgentState,
     runtime: Runtime[RequestContext],
     model,
 ):
-    """Call the assistant model with the conversation and bound tools."""
+    """Retrieve the tool-backed context required by the planning workflow."""
 
     timezone_name = runtime.context.timezone
     try:
@@ -24,7 +24,7 @@ async def call_model(
         user_timezone = ZoneInfo(timezone_name)
 
     system_message = SystemMessage(
-        content=ASSISTANT_PROMPT.format(
+        content=CONTEXT_RETRIEVAL_PROMPT.format(
             current_datetime=datetime.now(user_timezone).isoformat(),
             timezone=timezone_name,
         )
