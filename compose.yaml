@@ -45,7 +45,11 @@ services:
     depends_on:
       - api
     environment:
-      BASE_DRF_API: "${BASE_DRF_API:-http://api:8000/api/}"
-      OLLAMA_URL: "${OLLAMA_URL:-http://localhost:11434}"
+      BASE_DRF_API: "${BASE_DRF_API}"
+      OLLAMA_URL: "${OLLAMA_URL}"
+      LANGSMITH_TRACING: "${LANGSMITH_TRACING}"
+      LANGSMITH_ENDPOINT: "${LANGSMITH_ENDPOINT}"
+      LANGSMITH_API_KEY: "${LANGSMITH_API_KEY}"
+      LANGSMITH_PROJECT: "${LANGSMITH_PROJECT}"
 volumes:
   postgres_data:

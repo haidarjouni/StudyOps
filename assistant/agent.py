@@ -11,6 +11,8 @@ from nodes import call_model
 from runtime_context import RequestContext
 from state import AgentState
 from tools import READ_TOOLS
+from local_testing import get_demo_context
+
 
 config = Config()
 
@@ -36,19 +38,16 @@ app = graph.compile()  # compile the graph into an app that can be run
 # print(app.get_graph().draw_mermaid())
 
 async def main():
+    request_context = await get_demo_context()
     result = await app.ainvoke(
         {
             "messages": [
                 HumanMessage(
-                    content="I have a Data Structures exam coming up next week, and I need help creating a study plan. Can you assist me with that?"
+                    content="Create a study plan for my upcoming tasks over the next seven days."
                 )
             ],
         },
-        context=RequestContext(
-            access_token=None,
-            refresh_token=None,
-            timezone="Asia/Beirut",
-        ),
+        context=request_context,
     )
 
     print(result["messages"][-1].content)

@@ -1,7 +1,7 @@
 """LangChain tools exposed to the StudyOps assistant."""
 
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 
 from langchain.tools import ToolRuntime, tool
 from pydantic import Field, field_validator, model_validator
@@ -113,12 +113,21 @@ def _session_for_model(session: StudySession) -> dict[str, Any]:
     }
 
 
-@tool(args_schema=GetTasksInput)
+@tool
 async def get_tasks(
+    due_from: Annotated[
+        datetime,
+        Field(description="Earliest deadline to include, as a timezone-aware timestamp."),
+    ],
+    due_before: Annotated[
+        datetime,
+        Field(description="Latest deadline to include, as a timezone-aware timestamp."),
+    ],
     runtime: ToolRuntime[RequestContext],
-    due_from: datetime,
-    due_before: datetime,
-    subject: int | None = None,
+    subject: Annotated[
+        int | None,
+        Field(gt=0, description="Only return active tasks for this subject ID."),
+    ] = None,
 ) -> list[dict[str, Any]]:
     """Get the current user's unfinished tasks for study planning.
 
@@ -127,8 +136,16 @@ async def get_tasks(
     This tool only reads data; it never creates or changes a task.
     """
 
-    due_from_value = due_from.isoformat()
-    due_to = due_before.isoformat()
+    # Keep cross-field and timezone validation without exposing runtime through
+    # the model-facing Pydantic input schema.
+    filters = GetTasksInput(
+        due_from=due_from,
+        due_before=due_before,
+        subject=subject,
+    )
+
+    due_from_value = filters.due_from.isoformat()
+    due_to = filters.due_before.isoformat()
     settings = Config()
 
     async with StudyOpsAPIClient(
@@ -142,7 +159,7 @@ async def get_tasks(
             tasks.extend(
                 await client.list_study_tasks(
                     task_status=status.value,
-                    subject=subject,
+                    subject=filters.subject,
                     due_from=due_from_value,
                     due_to=due_to,
                 )
@@ -172,12 +189,31 @@ async def get_preferences(runtime: ToolRuntime[RequestContext]) -> dict[str, Any
     return preferences.model_dump(mode="json")
 
 
-@tool(args_schema=GetSessionsInput)
+@tool
 async def get_sessions(
+    window_start: Annotated[
+        datetime,
+        Field(
+            description=(
+                "Start of the planning window as a timezone-aware timestamp. "
+                "Sessions continuing into the window are included."
+            )
+        ),
+    ],
+    window_end: Annotated[
+        datetime,
+        Field(
+            description=(
+                "End of the planning window as a timezone-aware timestamp. "
+                "Sessions beginning before this boundary are included."
+            )
+        ),
+    ],
     runtime: ToolRuntime[RequestContext],
-    window_start: datetime,
-    window_end: datetime,
-    subject: int | None = None,
+    subject: Annotated[
+        int | None,
+        Field(gt=0, description="Only return sessions for this subject ID."),
+    ] = None,
 ) -> list[dict[str, Any]]:
     """Get scheduled sessions that overlap a study-planning window.
 
@@ -185,6 +221,12 @@ async def get_sessions(
     chronologically. This tool only reads data; it never changes a session.
     """
 
+    # Validate relationships between arguments after LangChain injects runtime.
+    filters = GetSessionsInput(
+        window_start=window_start,
+        window_end=window_end,
+        subject=subject,
+    )
     settings = Config()
 
     async with StudyOpsAPIClient(
@@ -194,9 +236,9 @@ async def get_sessions(
     ) as client:
         sessions = await client.list_sessions(
             status=SessionStatus.SCHEDULED.value,
-            subject=subject,
-            window_start=window_start.isoformat(),
-            window_end=window_end.isoformat(),
+            subject=filters.subject,
+            window_start=filters.window_start.isoformat(),
+            window_end=filters.window_end.isoformat(),
         )
 
     sessions.sort(key=lambda session: (session.start_at, session.id))
