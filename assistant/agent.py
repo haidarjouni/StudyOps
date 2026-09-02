@@ -6,8 +6,10 @@ from langchain_ollama import ChatOllama
 from langgraph.graph import END, START, StateGraph
 
 from config import Config
-from context import AgentState, ContextCheckOutput, RequestContext
 from nodes import get_context_needed
+from runtime_context import RequestContext
+from schemas.context_requests import ContextCheckOutput
+from state import AgentState
 
 config = Config()
 

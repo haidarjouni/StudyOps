@@ -8,7 +8,7 @@ from pydantic import Field, field_validator, model_validator
 
 from api_client import StudyOpsAPIClient
 from config import Config
-from context import RequestContext
+from runtime_context import RequestContext
 from schemas import SessionStatus, StudySession, StudyTask, Subject, TaskStatus
 from schemas.base import ToolInputModel
 

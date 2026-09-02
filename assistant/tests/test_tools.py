@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 
 import tools
-from context import RequestContext
+from runtime_context import RequestContext
 from schemas import StudyPreference, StudySession, StudyTask, Subject
 from tools import (GetSessionsInput, GetTasksInput, get_preferences,
                    get_sessions, get_tasks, list_subjects)

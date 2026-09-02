@@ -5,8 +5,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from langchain.messages import SystemMessage
 from langgraph.runtime import Runtime
 
-from context import AgentState, ContextRequest, RequestContext
 from prompts import CONTEXT_CHECKER_PROMPT
+from runtime_context import RequestContext
+from schemas.context_requests import ContextRequest
+from state import AgentState
 
 
 async def get_context_needed(
