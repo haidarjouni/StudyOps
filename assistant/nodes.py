@@ -6,7 +6,6 @@ from langgraph.runtime import Runtime
 
 from prompts import CONTEXT_RETRIEVAL_PROMPT, RESOLVE_PLANNING_REQUEST_PROMPT
 from runtime_context import RequestContext
-from schemas import RetrievedContext
 from state import AgentState
 
 
