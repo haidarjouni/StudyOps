@@ -5,6 +5,7 @@ from runtime_context import RequestContext
 
 config = Config()
 
+
 async def get_demo_context() -> RequestContext:
     async with httpx.AsyncClient(
         base_url=config.base_drf_api,

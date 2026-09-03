@@ -117,7 +117,9 @@ def _session_for_model(session: StudySession) -> dict[str, Any]:
 async def get_tasks(
     due_from: Annotated[
         datetime,
-        Field(description="Earliest deadline to include, as a timezone-aware timestamp."),
+        Field(
+            description="Earliest deadline to include, as a timezone-aware timestamp."
+        ),
     ],
     due_before: Annotated[
         datetime,

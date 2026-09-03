@@ -1,7 +1,9 @@
 from langgraph.graph import MessagesState
 
+from schemas import ResolvedPlanningRequest
+
 
 class AgentState(MessagesState):
     """Conversation state for the StudyOps assistant."""
 
-    pass
+    planning_request: ResolvedPlanningRequest

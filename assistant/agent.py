@@ -7,12 +7,12 @@ from langgraph.graph import START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from config import Config
-from nodes import retrieve_context
+from local_testing import get_demo_context
+from nodes import resolve_planning_request, retrieve_context
 from runtime_context import RequestContext
+from schemas import ResolvedPlanningRequest
 from state import AgentState
 from tools import READ_TOOLS
-from local_testing import get_demo_context
-
 
 config = Config()
 
@@ -23,19 +23,27 @@ model = ChatOllama(
 )  # create the model
 
 model_with_tools = model.bind_tools(READ_TOOLS)
+planning_request_model = model.with_structured_output(ResolvedPlanningRequest)
 
+resolve_planning_request_node = partial(
+    resolve_planning_request,
+    model=planning_request_model,
+)
 retrieve_context_node = partial(retrieve_context, model=model_with_tools)
 
 graph = StateGraph(AgentState, context_schema=RequestContext)
+graph.add_node("resolve_planning_request", resolve_planning_request_node)
 graph.add_node("retrieve_context", retrieve_context_node)
 graph.add_node("tools", ToolNode(READ_TOOLS))
-graph.add_edge(START, "retrieve_context")
+graph.add_edge(START, "resolve_planning_request")
+graph.add_edge("resolve_planning_request", "retrieve_context")
 graph.add_conditional_edges("retrieve_context", tools_condition)
 graph.add_edge("tools", "retrieve_context")
 
 app = graph.compile()  # compile the graph into an app that can be run
 
 # print(app.get_graph().draw_mermaid())
+
 
 async def main():
     request_context = await get_demo_context()
