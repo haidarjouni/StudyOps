@@ -1,12 +1,38 @@
+import json
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from langchain.messages import SystemMessage
+from langchain.messages import SystemMessage, ToolMessage
 from langgraph.runtime import Runtime
 
+from planning import build_planning_constraints
 from prompts import CONTEXT_RETRIEVAL_PROMPT, RESOLVE_PLANNING_REQUEST_PROMPT
 from runtime_context import RequestContext
+from schemas import StudyPreference
 from state import AgentState
+
+_MISSING = object()
+
+
+def get_tool_result(state: AgentState, tool_name: str):
+    """Return the latest successful result for a named tool."""
+
+    for message in reversed(state["messages"]):
+        if not isinstance(message, ToolMessage):
+            continue
+
+        if message.name != tool_name:
+            continue
+
+        if getattr(message, "status", "success") == "error":
+            raise ValueError(f"{tool_name} failed: {message.content}")
+
+        if isinstance(message.content, str):
+            return json.loads(message.content)
+
+        return message.content
+
+    return _MISSING
 
 
 def _user_timezone(timezone_name: str) -> tuple[str, ZoneInfo]:
@@ -60,3 +86,27 @@ async def retrieve_context(
     response = await model.ainvoke([system_message, *state["messages"]])
 
     return {"messages": [response]}
+
+
+async def collect_constraints(
+    state: AgentState,
+):
+    """Return the planning constraints derived from the user's request."""
+
+    preferences_data = get_tool_result(state, "get_preferences")
+    sessions_data = get_tool_result(state, "get_sessions")
+
+    if preferences_data is _MISSING:
+        raise ValueError("Missing get_preferences tool result")
+
+    if sessions_data is _MISSING:
+        raise ValueError("Missing get_sessions tool result")
+
+    study_preferences = StudyPreference.model_validate(preferences_data)
+    constraints = build_planning_constraints(
+        planning_request=state["planning_request"],
+        preferences=study_preferences,
+        sessions_data=sessions_data,
+    )
+
+    return {"planning_constraints": constraints}
