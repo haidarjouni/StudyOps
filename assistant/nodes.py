@@ -2,11 +2,12 @@ import json
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from langchain.messages import SystemMessage, ToolMessage
+from langchain.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.runtime import Runtime
 
 from planning import build_planning_constraints
-from prompts import CONTEXT_RETRIEVAL_PROMPT, RESOLVE_PLANNING_REQUEST_PROMPT
+from prompts import (CONTEXT_RETRIEVAL_PROMPT, GENERATE_DRAFT_SCHEDULE_PROMPT,
+                     RESOLVE_PLANNING_REQUEST_PROMPT)
 from runtime_context import RequestContext
 from schemas import PlanningSubject, StudyPreference
 from state import AgentState
@@ -33,6 +34,19 @@ def get_tool_result(state: AgentState, tool_name: str):
         return message.content
 
     return _MISSING
+
+
+def get_latest_user_request(state: AgentState) -> str:
+    """Return the most recent non-empty text request from the user."""
+
+    for message in reversed(state["messages"]):
+        if not isinstance(message, HumanMessage):
+            continue
+
+        if isinstance(message.content, str) and message.content.strip():
+            return message.content
+
+    raise ValueError("Missing user planning request")
 
 
 def _user_timezone(timezone_name: str) -> tuple[str, ZoneInfo]:
@@ -121,5 +135,29 @@ async def collect_constraints(
     }
 
 
-async def generate_draft_schedule():
-    pass
+async def generate_draft_schedule(
+    state: AgentState,
+    model,
+):
+    """Generate a draft schedule from the user's request and planning constraints."""
+    planning_constraints = state["planning_constraints"]
+    subjects = state["subjects"]
+
+    if not subjects:
+        raise ValueError("Cannot generate a draft schedule without subjects")
+
+    if not planning_constraints.daily_periods:
+        raise ValueError("Cannot generate a draft schedule without available periods")
+
+    subject_context = [subject.model_dump(mode="json") for subject in subjects] # turn them to json compatible format 
+    system_message = SystemMessage(
+        content=GENERATE_DRAFT_SCHEDULE_PROMPT.format(
+            user_request=get_latest_user_request(state),
+            subjects=json.dumps(subject_context, indent=2), # convert the list of subjects to JSON
+            planning_constraints=planning_constraints.model_dump_json(indent=2),
+        )
+    )
+
+    response = await model.ainvoke([system_message])
+
+    return {"draft_schedule": response}

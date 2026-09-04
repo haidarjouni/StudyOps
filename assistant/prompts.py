@@ -92,8 +92,8 @@ Resolved planning constraints:
 {planning_constraints}
 
 Treat the supplied PlanningConstraints as authoritative. Do not retrieve or
-consider other tasks. The `PlanningConstraints.daily_periods` entries represent the user's available
-study periods for each date in the plan.
+consider other tasks. The `PlanningConstraints.daily_periods` entries represent
+the user's available study periods for each date in the plan.
 
 Task rules:
 
@@ -130,7 +130,7 @@ Session-timing rules:
 3. Treat each daily period's `end_at` as the preferred stopping time. Normally,
    keep the entire session between that period's `start_at` and `end_at`.
 4. A session may extend beyond its daily period's `end_at` only when the task is
-   urgent and the remaining preferred study time before its due date cannot fit
+   urgent and the remaining available study time before its due date cannot fit
    the required work.
 5. Extending beyond `end_at` is a last resort. Use the smallest extension needed
    and do not extend merely to make the schedule more convenient.
@@ -146,7 +146,7 @@ Session-timing rules:
    of the remaining preferred period.
 10. Order competing work using deadline urgency and task priority.
 
-If preferred study time is insufficient, schedule as much required work as
+If available study time is insufficient, schedule as much required work as
 possible using the urgency-only extension rules without violating any hard
 boundary. Do not explain the schedule or return fields outside DraftSchedule.
 """
