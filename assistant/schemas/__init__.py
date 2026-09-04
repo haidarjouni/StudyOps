@@ -1,7 +1,6 @@
 """Public Pydantic schema exports for the StudyOps assistant."""
 
-from .draft_schedule import (Draft, DraftSchedule, DraftStudySession,
-                             DraftTask)
+from .draft_schedule import Draft, DraftSchedule, DraftStudySession, DraftTask
 from .planning_constraints import (DailyPlanningPeriod, PlanningConstraints,
                                    PlanningSubject, ResolvedPlanningRequest)
 from .study_preference import (StudyPreference, StudyPreferenceCreate,

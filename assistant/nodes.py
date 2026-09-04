@@ -149,11 +149,15 @@ async def generate_draft_schedule(
     if not planning_constraints.daily_periods:
         raise ValueError("Cannot generate a draft schedule without available periods")
 
-    subject_context = [subject.model_dump(mode="json") for subject in subjects] # turn them to json compatible format 
+    subject_context = [
+        subject.model_dump(mode="json") for subject in subjects
+    ]  # turn them to json compatible format
     system_message = SystemMessage(
         content=GENERATE_DRAFT_SCHEDULE_PROMPT.format(
             user_request=get_latest_user_request(state),
-            subjects=json.dumps(subject_context, indent=2), # convert the list of subjects to JSON
+            subjects=json.dumps(
+                subject_context, indent=2
+            ),  # convert the list of subjects to JSON
             planning_constraints=planning_constraints.model_dump_json(indent=2),
         )
     )

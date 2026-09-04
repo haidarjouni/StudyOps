@@ -9,10 +9,10 @@ from langgraph.prebuilt import ToolNode
 
 from config import Config
 from local_testing import get_demo_context
-from nodes import (collect_constraints, resolve_planning_request,
-                   retrieve_context)
+from nodes import (collect_constraints, generate_draft_schedule,
+                   resolve_planning_request, retrieve_context)
 from runtime_context import RequestContext
-from schemas import ResolvedPlanningRequest
+from schemas import DraftSchedule, ResolvedPlanningRequest
 from state import AgentState
 from tools import READ_TOOLS
 
@@ -26,11 +26,17 @@ model = ChatOllama(
 
 model_with_tools = model.bind_tools(READ_TOOLS)
 planning_request_model = model.with_structured_output(ResolvedPlanningRequest)
+draft_schedule_model = model.with_structured_output(DraftSchedule)
 
 resolve_planning_request_node = partial(
     resolve_planning_request,
     model=planning_request_model,
 )
+generate_draft_schedule_node = partial(
+    generate_draft_schedule,
+    model=draft_schedule_model,
+)
+
 retrieve_context_node = partial(retrieve_context, model=model_with_tools)
 
 
@@ -51,11 +57,13 @@ graph.add_node("resolve_planning_request", resolve_planning_request_node)
 graph.add_node("retrieve_context", retrieve_context_node)
 graph.add_node("tools", ToolNode(READ_TOOLS))
 graph.add_node("collect_constraints", collect_constraints)
+graph.add_node("generate_draft_schedule", generate_draft_schedule_node)
 graph.add_edge(START, "resolve_planning_request")
 graph.add_edge("resolve_planning_request", "retrieve_context")
 graph.add_conditional_edges("retrieve_context", route_after_context_retrieval)
 graph.add_edge("tools", "retrieve_context")
-graph.add_edge("collect_constraints", END)
+graph.add_edge("collect_constraints", "generate_draft_schedule")
+graph.add_edge("generate_draft_schedule", END)
 
 app = graph.compile()  # compile the graph into an app that can be run
 
@@ -75,7 +83,7 @@ async def main():
         context=request_context,
     )
 
-    print(result["planning_constraints"].model_dump_json(indent=2))
+    print(result["draft_schedule"].model_dump_json(indent=2))
 
 
 if __name__ == "__main__":
