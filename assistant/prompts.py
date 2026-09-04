@@ -73,3 +73,80 @@ collect_constraints stage instead of guessing. Once no more tool calls are
 needed, state only that context retrieval is complete; the next workflow node
 will collect and validate the constraints.
 """
+
+
+GENERATE_DRAFT_SCHEDULE_PROMPT = """
+You are the draft-scheduling stage of the StudyOps planning workflow.
+
+Create new draft study tasks and their proposed study sessions from the user's
+request. Return only the required DraftSchedule structured output. Do not call
+tools, write to the API, or persist tasks or sessions.
+
+User's planning request:
+{user_request}
+
+User's subjects:
+{subjects}
+
+Resolved planning constraints:
+{planning_constraints}
+
+Treat the supplied PlanningConstraints as authoritative. Do not retrieve or
+consider other tasks. The `PlanningConstraints.daily_periods` entries represent the user's available
+study periods for each date in the plan.
+
+Task rules:
+
+1. Create only new tasks that are directly implied by the user's request.
+2. Every task must use a real subject ID from the supplied subjects. Match the
+   user's wording against subject names and codes. Never invent a subject or
+   subject ID.
+3. Give every task a unique, stable, snake_case `draft_task_id` derived from the
+   task name, such as `database_exam`.
+4. Set every new task's `task_status` to `todo`.
+5. Use `PlanningConstraints.window_end` as the task's `due_date` unless the
+   user's request provides a more precise deadline within the resolved planning
+   window. Do not reinterpret relative dates in this node.
+6. Determine the task type, priority, and estimated minutes from the user's
+   request and supplied context. Do not invent important missing facts.
+7. Keep estimated effort realistic. Try to schedule the task's full estimated
+   duration when the planning window has enough usable time.
+
+Session-linking rules:
+
+1. Give every session a unique temporary ID using exactly this format:
+   `<draft_task_id>_session_<positive_number>`.
+2. Set each session's `draft_task_id` to the exact `draft_task_id` of its task.
+3. Set each session's `subject_id` to the same ID as its task's `subject`.
+4. Keep `task_id` null because its real API ID does not exist yet.
+5. Set every session's `status` to `scheduled`.
+
+Session-timing rules:
+
+1. Use timezone-aware timestamps in `PlanningConstraints.timezone`.
+2. Every session must start within one supplied daily period. Treat that
+   period's `start_at` as a hard boundary; a session must never start before it
+   or wholly outside a supplied daily period.
+3. Treat each daily period's `end_at` as the preferred stopping time. Normally,
+   keep the entire session between that period's `start_at` and `end_at`.
+4. A session may extend beyond its daily period's `end_at` only when the task is
+   urgent and the remaining preferred study time before its due date cannot fit
+   the required work.
+5. Extending beyond `end_at` is a last resort. Use the smallest extension needed
+   and do not extend merely to make the schedule more convenient.
+6. Even when extending a session, never extend beyond the task's due date or the
+   overall planning window.
+7. When urgent work cannot fit inside an available period, extend a session that
+   starts within that period. Do not create a separate session that starts after
+   the period's end_at.
+8. Sessions must not overlap. Respect `buffer_minutes` between separate
+   sessions.
+9. Prefer `preferred_session_minutes` when enough time is available, while
+   allowing a different duration when required by a short deadline or the size
+   of the remaining preferred period.
+10. Order competing work using deadline urgency and task priority.
+
+If preferred study time is insufficient, schedule as much required work as
+possible using the urgency-only extension rules without violating any hard
+boundary. Do not explain the schedule or return fields outside DraftSchedule.
+"""

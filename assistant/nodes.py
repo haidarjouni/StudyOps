@@ -8,7 +8,7 @@ from langgraph.runtime import Runtime
 from planning import build_planning_constraints
 from prompts import CONTEXT_RETRIEVAL_PROMPT, RESOLVE_PLANNING_REQUEST_PROMPT
 from runtime_context import RequestContext
-from schemas import StudyPreference
+from schemas import PlanningSubject, StudyPreference
 from state import AgentState
 
 _MISSING = object()
@@ -95,12 +95,15 @@ async def collect_constraints(
 
     preferences_data = get_tool_result(state, "get_preferences")
     sessions_data = get_tool_result(state, "get_sessions")
-
+    subjects_data = get_tool_result(state, "list_subjects")
     if preferences_data is _MISSING:
         raise ValueError("Missing get_preferences tool result")
 
     if sessions_data is _MISSING:
         raise ValueError("Missing get_sessions tool result")
+
+    if subjects_data is _MISSING:
+        raise ValueError("Missing list_subjects tool result")
 
     study_preferences = StudyPreference.model_validate(preferences_data)
     constraints = build_planning_constraints(
@@ -108,5 +111,15 @@ async def collect_constraints(
         preferences=study_preferences,
         sessions_data=sessions_data,
     )
+    planning_subject = [
+        PlanningSubject.model_validate(subject) for subject in subjects_data
+    ]
 
-    return {"planning_constraints": constraints}
+    return {
+        "planning_constraints": constraints,
+        "subjects": planning_subject,
+    }
+
+
+async def generate_draft_schedule():
+    pass

@@ -3,6 +3,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .base import ToolInputModel
+
 
 def _require_timezone_aware(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
@@ -99,3 +101,12 @@ class PlanningConstraints(BaseModel):
                 )
 
         return self
+
+
+class PlanningSubject(ToolInputModel):
+    """Subject information required when generating a study plan."""
+
+    id: int = Field(gt=0)
+    name: str = Field(min_length=1, max_length=100)
+    code: str = Field(min_length=1, max_length=10)
+    semester: int = Field(gt=0)

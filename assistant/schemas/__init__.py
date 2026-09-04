@@ -3,7 +3,7 @@
 from .draft_schedule import (Draft, DraftSchedule, DraftStudySession,
                              DraftTask)
 from .planning_constraints import (DailyPlanningPeriod, PlanningConstraints,
-                                   ResolvedPlanningRequest)
+                                   PlanningSubject, ResolvedPlanningRequest)
 from .study_preference import (StudyPreference, StudyPreferenceCreate,
                                StudyPreferenceUpdate)
 from .study_session import (SessionStatus, StudySession, StudySessionCreate,
@@ -19,6 +19,7 @@ __all__ = [
     "DraftStudySession",
     "DraftTask",
     "PlanningConstraints",
+    "PlanningSubject",
     "ResolvedPlanningRequest",
     "SessionStatus",
     "StudyPreference",
