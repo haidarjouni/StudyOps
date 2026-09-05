@@ -78,75 +78,124 @@ will collect and validate the constraints.
 GENERATE_DRAFT_SCHEDULE_PROMPT = """
 You are the draft-scheduling stage of the StudyOps planning workflow.
 
-Create new draft study tasks and their proposed study sessions from the user's
-request. Return only the required DraftSchedule structured output. Do not call
-tools, write to the API, or persist tasks or sessions.
+Create new draft tasks and study sessions for the user's requested work.
+Return only the required DraftSchedule structured output, with no commentary
+or Markdown. Do not call tools, write to the API, or persist anything.
 
 User's planning request:
 {user_request}
 
-User's subjects:
+Subject reference catalog:
 {subjects}
 
 Resolved planning constraints:
 {planning_constraints}
 
-Treat the supplied PlanningConstraints as authoritative. Do not retrieve or
-consider other tasks. The `PlanningConstraints.daily_periods` entries represent
-the user's available study periods for each date in the plan.
+Subject selection and scope:
 
-Task rules:
+1. The subject catalog exists only to resolve the IDs of requested subjects.
+   A subject's presence in the catalog does not authorize scheduling it.
+2. Match subjects mentioned in the request against catalog names and codes,
+   allowing clear wording variations such as 'data base' for 'Database Systems'.
+   Use the matching catalog ID. Never invent an ID or select an unrelated
+   subject when the intended subject cannot be resolved.
+3. Create tasks only for subjects requested by the user. Include all subjects
+   only if the user explicitly asks for all subjects.
+4. When the request describes one outcome for one subject, create exactly one
+   Draft containing one task and its study sessions. Use multiple sessions to
+   divide that work. Create additional tasks only for additional requested
+   outcomes.
+5. For example, 'I have a data base exam in two weeks; make a plan for it'
+   requires one database exam-preparation task. Do not create Data Structures,
+   Technical Writing, or other tasks just because those subjects are listed.
+6. Do not retrieve or consider existing tasks. Base the proposed work on the
+   user's request and the supplied planning context.
 
-1. Create only new tasks that are directly implied by the user's request.
-2. Every task must use a real subject ID from the supplied subjects. Match the
-   user's wording against subject names and codes. Never invent a subject or
-   subject ID.
-3. Give every task a unique, stable, snake_case `draft_task_id` derived from the
-   task name, such as `database_exam`.
-4. Set every new task's `task_status` to `todo`.
-5. Use `PlanningConstraints.window_end` as the task's `due_date` unless the
-   user's request provides a more precise deadline within the resolved planning
-   window. Do not reinterpret relative dates in this node.
-6. Determine the task type, priority, and estimated minutes from the user's
-   request and supplied context. Do not invent important missing facts.
-7. Keep estimated effort realistic. Try to schedule the task's full estimated
-   duration when the planning window has enough usable time.
+Task construction:
 
-Session-linking rules:
+1. Set `subject` to the selected catalog ID. Write a specific title and a
+   description grounded in the request. Do not invent exam topics, chapters,
+   assignments, or assessment details that the user did not supply.
+2. Set `task_type` appropriately: exam preparation uses `exam`. Explicitly
+   include `task_type`, `task_priority`, and `task_status` in each task.
+   Set `task_status` to `todo`; choose priority from the request and urgency.
+3. Give each task a unique snake_case `draft_task_id`, such as `database_exam`.
+   Keep temporary keys stable when revising the same proposed work.
+4. Use `PlanningConstraints.window_end` as `due_date` unless the request supplies
+   a more precise, already explicit deadline within the resolved window. The
+   earlier workflow stage has resolved relative dates; do not reinterpret them
+   or invent a different planning window.
+5. `estimated_minutes` is the total study effort for the entire task, across
+   all sessions. Use the user's stated effort when provided; otherwise make a
+   reasonable estimate from the requested work. Do not inflate the estimate
+   merely to fill available time.
 
-1. Give every session a unique temporary ID using exactly this format:
-   `<draft_task_id>_session_<positive_number>`.
-2. Set each session's `draft_task_id` to the exact `draft_task_id` of its task.
-3. Set each session's `subject_id` to the same ID as its task's `subject`.
-4. Keep `task_id` null because its real API ID does not exist yet.
-5. Set every session's `status` to `scheduled`.
+Session links and duration:
 
-Session-timing rules:
+1. Nest sessions under their associated task. Set each session's `subject_id`
+   equal to `task.subject` and `draft_task_id` equal to `task.draft_task_id`.
+2. Use unique `draft_session_id` values in the exact format
+   `<draft_task_id>_session_<positive_number>`, such as `database_exam_session_1`.
+3. Explicitly set `task_id` to null and `status` to `scheduled`. Real task IDs
+   are assigned only during later persistence.
+4. Calculate each session's duration from `end_at - start_at` in minutes.
+   The sum of session durations for a task must never exceed estimated_minutes.
+5. Aim for that sum to equal estimated_minutes. If constraints prevent full
+   coverage, schedule only the effort that fits and keep the original estimate.
+   Do not count buffers as study effort or duplicate effort across sessions.
+6. Prefer `preferred_session_minutes` for each session. Shorten the final
+   session to the remaining effort or shorten a session to fit an available
+   period. For example, 120 total minutes with a 45-minute preference can be
+   divided into 45, 45, and 30 minutes, with buffers between them.
 
-1. Use timezone-aware timestamps in `PlanningConstraints.timezone`.
-2. Every session must start within one supplied daily period. Treat that
-   period's `start_at` as a hard boundary; a session must never start before it
-   or wholly outside a supplied daily period.
-3. Treat each daily period's `end_at` as the preferred stopping time. Normally,
-   keep the entire session between that period's `start_at` and `end_at`.
-4. A session may extend beyond its daily period's `end_at` only when the task is
-   urgent and the remaining available study time before its due date cannot fit
-   the required work.
-5. Extending beyond `end_at` is a last resort. Use the smallest extension needed
-   and do not extend merely to make the schedule more convenient.
-6. Even when extending a session, never extend beyond the task's due date or the
-   overall planning window.
-7. When urgent work cannot fit inside an available period, extend a session that
-   starts within that period. Do not create a separate session that starts after
-   the period's end_at.
-8. Sessions must not overlap. Respect `buffer_minutes` between separate
-   sessions.
-9. Prefer `preferred_session_minutes` when enough time is available, while
-   allowing a different duration when required by a short deadline or the size
-   of the remaining preferred period.
-10. Order competing work using deadline urgency and task priority.
+Available time and hard boundaries:
 
-If available study time is insufficient, schedule as much required work as
-possible using the urgency-only extension rules without violating any hard
-boundary. Do not explain the schedule or return fields outside DraftSchedule.
+1. PlanningConstraints is authoritative. Its `daily_periods` entries are the
+   user's available study periods for each date.
+2. Use timezone-aware timestamps with the correct offset for
+   `PlanningConstraints.timezone` on each scheduled date.
+3. Every session must satisfy:
+   window_start <= start_at < end_at <= window_end.
+   It must also end no later than its task's due_date.
+4. Every session must begin inside one supplied daily period:
+   period.start_at <= session.start_at < period.end_at.
+   Never begin before the period's start or create a separate session beginning
+   at or after its end.
+5. Normally, the entire session must fit within that period. Extending its end
+   is permitted only under the urgency exception below.
+6. Check all sessions across all drafts together. No two sessions may overlap,
+   even when they belong to different subjects or tasks. After sorting every
+   session by start time, each next session must start at least buffer_minutes
+   after the previous session ends.
+7. Prioritize competing requested work by deadline urgency and task priority.
+   Available periods do not all have to be filled.
+
+Urgency exception:
+
+1. Extend a session past its period's end_at only if the task's deadline is close
+   and its remaining effort cannot fit into the available periods before that
+   deadline after accounting for other planned sessions and buffers.
+2. First use available time before the deadline. A short period on one date
+   alone does not justify extending it when other suitable periods remain.
+3. Extend a session that begins inside the period, using the smallest necessary
+   extension. For example, an urgent two-hour task may run 09:00-11:00 in a
+   09:00-10:00 period only when the urgency and insufficient-capacity conditions
+   are satisfied. This may exceed the preferred session length.
+4. Even during an extension, respect the task deadline, overall planning window,
+   non-overlap, buffers, and total estimated effort. Never extend simply to fill
+   time or make scheduling more convenient.
+
+Before returning, check and correct the complete draft:
+
+- Every task represents requested work for a requested subject.
+- One requested outcome for one subject produces exactly one Draft.
+- All subject IDs come from the catalog, and every session matches its task.
+- Temporary IDs follow the required format and are unique.
+- Every session has a positive duration and respects all hard time boundaries.
+- Sessions across the entire schedule have no overlaps and sufficient buffers.
+- Each task's total scheduled minutes is at most its estimated_minutes, with
+  full coverage when feasible.
+- Every extension satisfies the urgency exception.
+
+Return only DraftSchedule fields. Do not include this checklist in the output.
 """

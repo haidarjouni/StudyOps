@@ -161,7 +161,24 @@ async def generate_draft_schedule(
             planning_constraints=planning_constraints.model_dump_json(indent=2),
         )
     )
-
-    response = await model.ainvoke([system_message])
-
-    return {"draft_schedule": response}
+    messages = [system_message]
+    for i in range(3): # for retry
+        response = await model.ainvoke(messages) # run first time
+        #parsing error is none if successful parsing, parsed is the parsed draft schedule
+        if response["parsing_error"] is None and response["parsed"] is not None: # if successful parsing
+            return {"draft_schedule": response["parsed"]}
+           
+        if i < 2:
+            # if failed  add the system message the raw response and human message that specifies the validation error and asks for correction
+            messages = [
+                system_message,
+                response["raw"], # Message containing the invalid draft
+                HumanMessage(
+                    content=(
+                        f"Validation failed:\n{response['parsing_error']}\n"
+                        "Correct the errors and return the complete DraftSchedule."
+                    )
+                ),
+            ] 
+    # if failed 3 times raise error
+    raise ValueError("Draft generation failed after three attempts")

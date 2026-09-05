@@ -8,8 +8,8 @@ load_dotenv()  # Load environment variables from .env file
 
 @dataclass(frozen=True)
 class Config:
-    # The URL of the Ollama API.
-    ollama_url: str = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    # ChatOpenAI reads OPENAI_API_KEY directly from the environment.
+    openai_model: str = os.environ.get("OPENAI_MODEL", "gpt-5.6-terra")
 
     # The base URL of the DRF API.
     base_drf_api: str = os.environ.get("BASE_DRF_API", "http://localhost:8000/api/")

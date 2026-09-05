@@ -3,7 +3,7 @@ from functools import partial
 from typing import Literal
 
 from langchain.messages import HumanMessage
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 
@@ -18,15 +18,24 @@ from tools import READ_TOOLS
 
 config = Config()
 
-model = ChatOllama(
-    model="qwen3.5:9b",
-    temperature=0,
-    base_url=config.ollama_url,
+model = ChatOpenAI(
+    model=config.openai_model,
+    reasoning_effort="low",
 )  # create the model
 
-model_with_tools = model.bind_tools(READ_TOOLS)
-planning_request_model = model.with_structured_output(ResolvedPlanningRequest)
-draft_schedule_model = model.with_structured_output(DraftSchedule)
+# Terra requires reasoning disabled for function tools on Chat Completions.
+model_with_tools = model.bind_tools(READ_TOOLS, reasoning_effort="none")
+planning_request_model = model.with_structured_output(
+    ResolvedPlanningRequest,
+    method="json_schema", # specify the method for structured output
+    strict=True, # enforce strict validation of the output
+)
+draft_schedule_model = model.with_structured_output(
+    DraftSchedule, #the pydantic model to validate against
+    method="json_schema", # specify the method for structured output
+    strict=True, # enforce strict validation of the output
+    include_raw=True, # include the raw output from the model in the result
+)
 
 resolve_planning_request_node = partial(
     resolve_planning_request,
@@ -76,7 +85,7 @@ async def main():
         {
             "messages": [
                 HumanMessage(
-                    content="Create a study plan for my upcoming tasks over the next seven days."
+                    content="i have a data base exam coming up in 2 weeks, and i want to make a study plan for it."
                 )
             ],
         },
@@ -84,7 +93,6 @@ async def main():
     )
 
     print(result["draft_schedule"].model_dump_json(indent=2))
-
 
 if __name__ == "__main__":
     asyncio.run(main())
