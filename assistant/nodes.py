@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from langchain.messages import HumanMessage, SystemMessage, ToolMessage
@@ -7,9 +7,10 @@ from langgraph.runtime import Runtime
 
 from planning import build_planning_constraints
 from prompts import (CONTEXT_RETRIEVAL_PROMPT, GENERATE_DRAFT_SCHEDULE_PROMPT,
-                     RESOLVE_PLANNING_REQUEST_PROMPT)
+                     RESOLVE_PLANNING_REQUEST_PROMPT,
+                     REVISE_DRAFT_SCHEDULE_PROMPT)
 from runtime_context import RequestContext
-from schemas import PlanningSubject, StudyPreference
+from schemas import PlanningSubject, StudyPreference, ValidationNote
 from state import AgentState
 
 _MISSING = object()
@@ -182,3 +183,152 @@ async def generate_draft_schedule(
             ] 
     # if failed 3 times raise error
     raise ValueError("Draft generation failed after three attempts")
+
+
+def validate_schedule(state: AgentState):
+    """Validate business rules that depend on the complete draft schedule."""
+
+    schedule = state["draft_schedule"]
+    constraints = state["planning_constraints"]
+    revision_count = state.get("schedule_revision_count", 0)
+    notes: list[ValidationNote] = []
+    all_sessions = []
+
+    for draft in schedule.drafts:
+        scheduled_duration = timedelta() # initialize scheduled_duration to zero
+
+        for session in draft.study_sessions: # for each session in the list of study_sessions of the draft
+            all_sessions.append((draft.task.draft_task_id, session)) # gets all the sessions in the schedule and adds them to a list of tuples containing the draft_task_id and the session
+            scheduled_duration += session.end_at - session.start_at
+
+            if (
+                # check if the session is outside the planning window
+                session.start_at < constraints.window_start
+                or session.end_at > constraints.window_end
+            ):
+                notes.append(
+                    ValidationNote(
+                        code="outside_planning_window",
+                        message=(
+                            f"{session.draft_session_id} runs from "
+                            f"{session.start_at.isoformat()} to "
+                            f"{session.end_at.isoformat()}, outside the planning "
+                            f"window {constraints.window_start.isoformat()} to "
+                            f"{constraints.window_end.isoformat()}."
+                        ),
+                        draft_task_id=draft.task.draft_task_id,
+                        draft_session_id=session.draft_session_id,
+                    )
+                )
+                continue
+            
+            containing_period = next(
+                (
+                    # get periods that contain the session start time, if any
+                    period
+                    for period in constraints.daily_periods
+                    if period.start_at <= session.start_at < period.end_at
+                ),
+                None,
+            )
+            # if no containing period is found, the session is outside the available periods
+            if containing_period is None:
+                notes.append(
+                    ValidationNote(
+                        code="outside_available_period",
+                        message=(
+                            f"{session.draft_session_id} starts at "
+                            f"{session.start_at.isoformat()}, outside every "
+                            "available planning period."
+                        ),
+                        draft_task_id=draft.task.draft_task_id,
+                        draft_session_id=session.draft_session_id,
+                    )
+                )
+            # if the session ends after the containing period and this is the first revision, add a period_extension note
+            elif session.end_at > containing_period.end_at and revision_count == 0:
+                extension_minutes = int(
+                    (session.end_at - containing_period.end_at).total_seconds() // 60
+                )
+                notes.append(
+                    ValidationNote(
+                        code="period_extension",
+                        message=(
+                            f"{session.draft_session_id} ends at "
+                            f"{session.end_at.isoformat()}, extending "
+                            f"{extension_minutes} minutes beyond the available "
+                            f"period ending at {containing_period.end_at.isoformat()}."
+                        ),
+                        draft_task_id=draft.task.draft_task_id,
+                        draft_session_id=session.draft_session_id,
+                    )
+                )
+        # gets estimated duration of the task in minutes and converts it to timedelta
+        estimated_duration = timedelta(minutes=draft.task.estimated_minutes)
+        # if the total scheduled duration exceeds the estimated duration, add a note
+        if scheduled_duration > estimated_duration:
+            scheduled_minutes = int(scheduled_duration.total_seconds() // 60)
+            notes.append(
+                ValidationNote(
+                    code="estimated_minutes_exceeded",
+                    message=(
+                        f"{draft.task.draft_task_id} has {scheduled_minutes} "
+                        f"scheduled minutes but its estimate is "
+                        f"{draft.task.estimated_minutes} minutes."
+                    ),
+                    draft_task_id=draft.task.draft_task_id,
+                )
+            )
+    #sort by start time of the sessions to check for overlaps and insufficient buffer
+    all_sessions.sort(key=lambda item: item[1].start_at)
+    required_buffer = timedelta(minutes=constraints.buffer_minutes) #get the buffer time required between sessions
+    # _ don't care previous is the previous session is a tuple, task_id and current is the current session in the sorted list of all sessions
+    # also zip the list of all sessions with itself but shifted by one to get pairs of previous and current sessions
+    # example (task1, session1), (task2, session2)
+    # example of zip ((9->10), (10->11)) 
+    for (_, previous), (task_id, current) in zip(all_sessions, all_sessions[1:]):
+        # check if the current session starts before the previous session ends, indicating an overlap
+        if current.start_at < previous.end_at:
+            notes.append(
+                ValidationNote(
+                    code="overlap",
+                    message=(
+                        f"{current.draft_session_id} starts at "
+                        f"{current.start_at.isoformat()} before "
+                        f"{previous.draft_session_id} ends at "
+                        f"{previous.end_at.isoformat()}."
+                    ),
+                    draft_task_id=task_id,
+                    draft_session_id=current.draft_session_id,
+                    related_session_id=previous.draft_session_id,
+                )
+            )
+        # check if the current session starts before the required buffer time after the previous session ends, indicating insufficient buffer
+        elif current.start_at < previous.end_at + required_buffer:
+            required_start = previous.end_at + required_buffer
+            notes.append(
+                ValidationNote(
+                    code="insufficient_buffer",
+                    message=(
+                        f"{current.draft_session_id} starts at "
+                        f"{current.start_at.isoformat()}, but it must start at or "
+                        f"after {required_start.isoformat()} to preserve the "
+                        f"{constraints.buffer_minutes}-minute buffer after "
+                        f"{previous.draft_session_id}."
+                    ),
+                    draft_task_id=task_id,
+                    draft_session_id=current.draft_session_id,
+                    related_session_id=previous.draft_session_id,
+                )
+            )
+    # if there are validation notes and the schedule has been revised 3 or more times, raise an error with the messages of the notes
+    if notes and revision_count >= 3:
+        messages = "\n".join(note.message for note in notes)
+        raise ValueError(
+            f"Draft schedule still has validation errors after three revisions:\n{messages}"
+        )
+
+    return {
+        "validation_notes": notes,
+        "schedule_revision_count": revision_count,
+    }

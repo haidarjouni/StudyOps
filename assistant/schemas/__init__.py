@@ -10,6 +10,7 @@ from .study_session import (SessionStatus, StudySession, StudySessionCreate,
 from .study_task import (StudyTask, StudyTaskCreate, StudyTaskDelete,
                          StudyTaskUpdate, TaskPriority, TaskStatus, TaskType)
 from .subject import Subject, SubjectCreate, SubjectDelete, SubjectUpdate
+from .validation import ValidationNote
 
 __all__ = [
     "DailyPlanningPeriod",
@@ -39,4 +40,5 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "TaskType",
+    "ValidationNote",
 ]

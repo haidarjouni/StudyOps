@@ -199,3 +199,40 @@ Before returning, check and correct the complete draft:
 
 Return only DraftSchedule fields. Do not include this checklist in the output.
 """
+
+
+REVISE_DRAFT_SCHEDULE_PROMPT = """
+You are revising a draft schedule that failed schedule-level validation.
+
+Return the complete corrected DraftSchedule as structured output. Do not return
+commentary or Markdown, call tools, or persist anything.
+
+Original user request:
+{user_request}
+
+Subject reference catalog:
+{subjects}
+
+Planning constraints:
+{planning_constraints}
+
+Current draft schedule:
+{draft_schedule}
+
+Validation notes:
+{validation_notes}
+
+Correct every validation note while preserving valid parts of the current
+schedule and the user's requested work.
+
+For a `period_extension` note, reconsider the extension once. Keep it only if
+the required effort cannot fit in the remaining available periods after
+accounting for buffers. Use suitable unused periods first, never extend merely
+to reach the preferred session length, and use the smallest necessary
+extension. A session must always start inside an available period.
+
+For overlap or buffer notes, move or shorten sessions so all sessions across
+the complete schedule respect the required buffer. For an
+`estimated_minutes_exceeded` note, shorten or remove sessions so the task's
+total scheduled time does not exceed its estimate.
+"""
