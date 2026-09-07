@@ -225,6 +225,11 @@ Validation notes:
 Correct every validation note while preserving valid parts of the current
 schedule and the user's requested work.
 
+Make the smallest changes needed. Preserve all unaffected tasks, sessions,
+grounded subject IDs, draft task IDs, and draft session IDs. Continue following
+all original planning constraints. Return the entire revised schedule in the
+same DraftSchedule schema, not a patch or a list of changes.
+
 For a `period_extension` note, reconsider the extension once. Keep it only if
 the required effort cannot fit in the remaining available periods after
 accounting for buffers. Use suitable unused periods first, never extend merely

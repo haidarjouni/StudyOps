@@ -332,3 +332,70 @@ def validate_schedule(state: AgentState):
         "validation_notes": notes,
         "schedule_revision_count": revision_count,
     }
+
+
+async def revise_draft_schedule(
+    state: AgentState,
+    model,
+):
+    """Revise the draft schedule based on validation notes."""
+    
+    validation_notes = state["validation_notes"]
+    if not validation_notes:
+        raise ValueError("No validation notes to address in draft schedule")
+
+    draft_schedule = state["draft_schedule"]
+
+    if not draft_schedule.drafts:
+        raise ValueError("Draft schedule is empty, cannot revise")
+
+    planning_constraints = state["planning_constraints"]
+    if not planning_constraints.daily_periods:
+        raise ValueError(
+            "No available periods in planning constraints, cannot revise draft schedule"
+        )
+
+    subjects = state["subjects"]
+    if not subjects:
+        raise ValueError("No subjects available, cannot revise draft schedule")
+
+    user_request = get_latest_user_request(state)
+
+    system_message = SystemMessage(
+        content=REVISE_DRAFT_SCHEDULE_PROMPT.format(
+            user_request=user_request,
+            subjects=json.dumps(
+                [subject.model_dump(mode="json") for subject in subjects], indent=2
+            ),
+            draft_schedule=draft_schedule.model_dump_json(indent=2),
+            validation_notes=json.dumps(
+                [note.model_dump(mode="json") for note in validation_notes], indent=2
+            ),
+            planning_constraints=planning_constraints.model_dump_json(indent=2),
+        )
+    )
+
+    messages = [system_message]
+    for attempt in range(3):
+        response = await model.ainvoke(messages)
+        if response["parsing_error"] is None and response["parsed"] is not None:
+            return {
+                "draft_schedule": response["parsed"],
+                "schedule_revision_count": (
+                    state.get("schedule_revision_count", 0) + 1
+                ),
+            }
+
+        if attempt < 2:
+            messages = [
+                system_message,
+                response["raw"],
+                HumanMessage(
+                    content=(
+                        f"Validation failed:\n{response['parsing_error']}\n"
+                        "Correct the errors and return the complete DraftSchedule."
+                    )
+                ),
+            ]
+
+    raise ValueError("Draft revision failed after three attempts")

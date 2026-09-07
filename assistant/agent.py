@@ -11,7 +11,7 @@ from config import Config
 from local_testing import get_demo_context
 from nodes import (collect_constraints, generate_draft_schedule,
                    resolve_planning_request, retrieve_context,
-                   validate_schedule)
+                   revise_draft_schedule, validate_schedule)
 from runtime_context import RequestContext
 from schemas import DraftSchedule, ResolvedPlanningRequest
 from state import AgentState
@@ -46,6 +46,10 @@ generate_draft_schedule_node = partial(
     generate_draft_schedule,
     model=draft_schedule_model,
 )
+revise_draft_schedule_node = partial(
+    revise_draft_schedule,
+    model=draft_schedule_model,
+)
 
 retrieve_context_node = partial(retrieve_context, model=model_with_tools)
 
@@ -62,7 +66,13 @@ def route_after_context_retrieval(
     return "collect_constraints"
 
 
-
+def route_after_validation(
+    state: AgentState,
+) -> Literal["revise_draft_schedule", END]: # type: ignore
+    """Revise invalid schedules and finish when validation succeeds."""
+    if state["validation_notes"]:
+        return "revise_draft_schedule"
+    return END
 
 
 graph = StateGraph(AgentState, context_schema=RequestContext)
@@ -72,13 +82,15 @@ graph.add_node("tools", ToolNode(READ_TOOLS))
 graph.add_node("collect_constraints", collect_constraints)
 graph.add_node("generate_draft_schedule", generate_draft_schedule_node)
 graph.add_node("validate_schedule", validate_schedule)
+graph.add_node("revise_draft_schedule", revise_draft_schedule_node)
 graph.add_edge(START, "resolve_planning_request")
 graph.add_edge("resolve_planning_request", "retrieve_context")
 graph.add_conditional_edges("retrieve_context", route_after_context_retrieval)
 graph.add_edge("tools", "retrieve_context")
 graph.add_edge("collect_constraints", "generate_draft_schedule")
 graph.add_edge("generate_draft_schedule", "validate_schedule")
-graph.add_edge("validate_schedule", END)
+graph.add_conditional_edges("validate_schedule", route_after_validation)
+graph.add_edge("revise_draft_schedule", "validate_schedule")
 app = graph.compile()  # compile the graph into an app that can be run
 
 # print(app.get_graph().draw_mermaid())
