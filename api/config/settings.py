@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'subject',
     'study_preference',
     'accounts',
+    'thread',
 ]
 
 MIDDLEWARE = [
