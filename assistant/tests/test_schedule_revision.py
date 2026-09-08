@@ -1,11 +1,10 @@
 import pytest
 from langchain.messages import AIMessage, HumanMessage
+from test_draft_schedule import make_session, make_task
+from test_schedule_validation import make_constraints
 
 from nodes import revise_draft_schedule
 from schemas import Draft, DraftSchedule, PlanningSubject, ValidationNote
-
-from test_draft_schedule import make_session, make_task
-from test_schedule_validation import make_constraints
 
 
 class StructuredOutputModel:

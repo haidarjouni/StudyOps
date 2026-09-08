@@ -6,12 +6,9 @@ from langchain.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.runtime import Runtime
 
 from planning import build_planning_constraints
-from prompts import (
-    CONTEXT_RETRIEVAL_PROMPT,
-    GENERATE_DRAFT_SCHEDULE_PROMPT,
-    RESOLVE_PLANNING_REQUEST_PROMPT,
-    REVISE_DRAFT_SCHEDULE_PROMPT,
-)
+from prompts import (CONTEXT_RETRIEVAL_PROMPT, GENERATE_DRAFT_SCHEDULE_PROMPT,
+                     RESOLVE_PLANNING_REQUEST_PROMPT,
+                     REVISE_DRAFT_SCHEDULE_PROMPT)
 from runtime_context import RequestContext
 from schemas import PlanningSubject, StudyPreference, ValidationNote
 from state import AgentState

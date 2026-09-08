@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from nodes import validate_schedule
-from schemas import DailyPlanningPeriod, Draft, DraftSchedule, PlanningConstraints
-
 from test_draft_schedule import make_session, make_task
+
+from nodes import validate_schedule
+from schemas import (DailyPlanningPeriod, Draft, DraftSchedule,
+                     PlanningConstraints)
 
 
 def make_constraints(**changes) -> PlanningConstraints:
