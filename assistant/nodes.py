@@ -6,9 +6,12 @@ from langchain.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.runtime import Runtime
 
 from planning import build_planning_constraints
-from prompts import (CONTEXT_RETRIEVAL_PROMPT, GENERATE_DRAFT_SCHEDULE_PROMPT,
-                     RESOLVE_PLANNING_REQUEST_PROMPT,
-                     REVISE_DRAFT_SCHEDULE_PROMPT)
+from prompts import (
+    CONTEXT_RETRIEVAL_PROMPT,
+    GENERATE_DRAFT_SCHEDULE_PROMPT,
+    RESOLVE_PLANNING_REQUEST_PROMPT,
+    REVISE_DRAFT_SCHEDULE_PROMPT,
+)
 from runtime_context import RequestContext
 from schemas import PlanningSubject, StudyPreference, ValidationNote
 from state import AgentState
@@ -163,24 +166,26 @@ async def generate_draft_schedule(
         )
     )
     messages = [system_message]
-    for i in range(3): # for retry
-        response = await model.ainvoke(messages) # run first time
-        #parsing error is none if successful parsing, parsed is the parsed draft schedule
-        if response["parsing_error"] is None and response["parsed"] is not None: # if successful parsing
+    for i in range(3):  # for retry
+        response = await model.ainvoke(messages)  # run first time
+        # parsing error is none if successful parsing, parsed is the parsed draft schedule
+        if (
+            response["parsing_error"] is None and response["parsed"] is not None
+        ):  # if successful parsing
             return {"draft_schedule": response["parsed"]}
-           
+
         if i < 2:
             # if failed  add the system message the raw response and human message that specifies the validation error and asks for correction
             messages = [
                 system_message,
-                response["raw"], # Message containing the invalid draft
+                response["raw"],  # Message containing the invalid draft
                 HumanMessage(
                     content=(
                         f"Validation failed:\n{response['parsing_error']}\n"
                         "Correct the errors and return the complete DraftSchedule."
                     )
                 ),
-            ] 
+            ]
     # if failed 3 times raise error
     raise ValueError("Draft generation failed after three attempts")
 
@@ -195,10 +200,16 @@ def validate_schedule(state: AgentState):
     all_sessions = []
 
     for draft in schedule.drafts:
-        scheduled_duration = timedelta() # initialize scheduled_duration to zero
+        scheduled_duration = timedelta()  # initialize scheduled_duration to zero
 
-        for session in draft.study_sessions: # for each session in the list of study_sessions of the draft
-            all_sessions.append((draft.task.draft_task_id, session)) # gets all the sessions in the schedule and adds them to a list of tuples containing the draft_task_id and the session
+        for (
+            session
+        ) in (
+            draft.study_sessions
+        ):  # for each session in the list of study_sessions of the draft
+            all_sessions.append(
+                (draft.task.draft_task_id, session)
+            )  # gets all the sessions in the schedule and adds them to a list of tuples containing the draft_task_id and the session
             scheduled_duration += session.end_at - session.start_at
 
             if (
@@ -221,7 +232,7 @@ def validate_schedule(state: AgentState):
                     )
                 )
                 continue
-            
+
             containing_period = next(
                 (
                     # get periods that contain the session start time, if any
@@ -279,13 +290,15 @@ def validate_schedule(state: AgentState):
                     draft_task_id=draft.task.draft_task_id,
                 )
             )
-    #sort by start time of the sessions to check for overlaps and insufficient buffer
+    # sort by start time of the sessions to check for overlaps and insufficient buffer
     all_sessions.sort(key=lambda item: item[1].start_at)
-    required_buffer = timedelta(minutes=constraints.buffer_minutes) #get the buffer time required between sessions
+    required_buffer = timedelta(
+        minutes=constraints.buffer_minutes
+    )  # get the buffer time required between sessions
     # _ don't care previous is the previous session is a tuple, task_id and current is the current session in the sorted list of all sessions
     # also zip the list of all sessions with itself but shifted by one to get pairs of previous and current sessions
     # example (task1, session1), (task2, session2)
-    # example of zip ((9->10), (10->11)) 
+    # example of zip ((9->10), (10->11))
     for (_, previous), (task_id, current) in zip(all_sessions, all_sessions[1:]):
         # check if the current session starts before the previous session ends, indicating an overlap
         if current.start_at < previous.end_at:
@@ -339,7 +352,7 @@ async def revise_draft_schedule(
     model,
 ):
     """Revise the draft schedule based on validation notes."""
-    
+
     validation_notes = state["validation_notes"]
     if not validation_notes:
         raise ValueError("No validation notes to address in draft schedule")

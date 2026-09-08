@@ -5,11 +5,14 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from pydantic import (AwareDatetime, BaseModel, ConfigDict, TypeAdapter,
-                      model_validator)
+from pydantic import AwareDatetime, BaseModel, ConfigDict, TypeAdapter, model_validator
 
-from schemas import (DailyPlanningPeriod, PlanningConstraints,
-                     ResolvedPlanningRequest, StudyPreference)
+from schemas import (
+    DailyPlanningPeriod,
+    PlanningConstraints,
+    ResolvedPlanningRequest,
+    StudyPreference,
+)
 
 
 class _ExistingSessionPeriod(BaseModel):

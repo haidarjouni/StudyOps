@@ -3,8 +3,14 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from schemas import (Draft, DraftSchedule, DraftStudySession, DraftTask,
-                     StudySessionCreate, StudyTaskCreate)
+from schemas import (
+    Draft,
+    DraftSchedule,
+    DraftStudySession,
+    DraftTask,
+    StudySessionCreate,
+    StudyTaskCreate,
+)
 
 
 def make_task(**changes) -> DraftTask:

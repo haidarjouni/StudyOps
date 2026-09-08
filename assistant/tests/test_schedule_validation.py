@@ -1,8 +1,7 @@
 from datetime import datetime
 
 from nodes import validate_schedule
-from schemas import (DailyPlanningPeriod, Draft, DraftSchedule,
-                     PlanningConstraints)
+from schemas import DailyPlanningPeriod, Draft, DraftSchedule, PlanningConstraints
 
 from test_draft_schedule import make_session, make_task
 
@@ -37,9 +36,7 @@ def validate(drafts, *, constraints=None, revision_count=0):
 
 
 def test_accepts_a_valid_schedule():
-    notes = validate(
-        [Draft(task=make_task(), study_sessions=[make_session()])]
-    )
+    notes = validate([Draft(task=make_task(), study_sessions=[make_session()])])
 
     assert notes == []
 
@@ -57,9 +54,7 @@ def test_rejects_a_session_starting_outside_available_periods():
                 ],
             )
         ],
-        constraints=make_constraints(
-            window_start="2026-09-05T07:00:00+03:00"
-        ),
+        constraints=make_constraints(window_start="2026-09-05T07:00:00+03:00"),
     )
 
     assert [note.code for note in notes] == ["outside_available_period"]

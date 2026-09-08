@@ -21,8 +21,15 @@ database services available:
 
 ```powershell
 docker compose build assistant
-docker compose run --rm assistant python agent.py
+docker compose run --rm assistant python agent.py YOUR_EXISTING_THREAD_ID
 ```
+
+`Config` builds the checkpoint URL from the existing `POSTGRES_USER`,
+`POSTGRES_PASSWORD`, and `POSTGRES_DB` variables. Local Python defaults to
+`localhost` and `DB_HOST_PORT` (5432 if unset). Compose supplies
+`POSTGRES_HOST=db` and `POSTGRES_PORT=5432` for the assistant container.
+Checkpoint tables must
+already be initialized with `await checkpointer.setup()` once before use.
 
 Both date resolution and draft generation use strict JSON-schema structured
 output. Draft generation retains its initial attempt plus two parsing repair

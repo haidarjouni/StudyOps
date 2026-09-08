@@ -7,8 +7,14 @@ from pydantic import ValidationError
 import tools
 from runtime_context import RequestContext
 from schemas import StudyPreference, StudySession, StudyTask, Subject
-from tools import (GetSessionsInput, GetTasksInput, get_preferences,
-                   get_sessions, get_tasks, list_subjects)
+from tools import (
+    GetSessionsInput,
+    GetTasksInput,
+    get_preferences,
+    get_sessions,
+    get_tasks,
+    list_subjects,
+)
 
 
 def make_task(

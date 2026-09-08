@@ -1,4 +1,5 @@
 import asyncio
+import argparse
 from functools import partial
 from typing import Literal
 
@@ -6,12 +7,17 @@ from langchain.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
-
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from config import Config
 from local_testing import get_demo_context
-from nodes import (collect_constraints, generate_draft_schedule,
-                   resolve_planning_request, retrieve_context,
-                   revise_draft_schedule, validate_schedule)
+from nodes import (
+    collect_constraints,
+    generate_draft_schedule,
+    resolve_planning_request,
+    retrieve_context,
+    revise_draft_schedule,
+    validate_schedule,
+)
 from runtime_context import RequestContext
 from schemas import DraftSchedule, ResolvedPlanningRequest
 from state import AgentState
@@ -28,14 +34,14 @@ model = ChatOpenAI(
 model_with_tools = model.bind_tools(READ_TOOLS, reasoning_effort="none")
 planning_request_model = model.with_structured_output(
     ResolvedPlanningRequest,
-    method="json_schema", # specify the method for structured output
-    strict=True, # enforce strict validation of the output
+    method="json_schema",  # specify the method for structured output
+    strict=True,  # enforce strict validation of the output
 )
 draft_schedule_model = model.with_structured_output(
-    DraftSchedule, #the pydantic model to validate against
-    method="json_schema", # specify the method for structured output
-    strict=True, # enforce strict validation of the output
-    include_raw=True, # include the raw output from the model in the result
+    DraftSchedule,  # the pydantic model to validate against
+    method="json_schema",  # specify the method for structured output
+    strict=True,  # enforce strict validation of the output
+    include_raw=True,  # include the raw output from the model in the result
 )
 
 resolve_planning_request_node = partial(
@@ -68,7 +74,7 @@ def route_after_context_retrieval(
 
 def route_after_validation(
     state: AgentState,
-) -> Literal["revise_draft_schedule", END]: # type: ignore
+) -> Literal["revise_draft_schedule", END]:  # type: ignore
     """Revise invalid schedules and finish when validation succeeds."""
     if state["validation_notes"]:
         return "revise_draft_schedule"
@@ -91,25 +97,19 @@ graph.add_edge("collect_constraints", "generate_draft_schedule")
 graph.add_edge("generate_draft_schedule", "validate_schedule")
 graph.add_conditional_edges("validate_schedule", route_after_validation)
 graph.add_edge("revise_draft_schedule", "validate_schedule")
-app = graph.compile()  # compile the graph into an app that can be run
 
 # print(app.get_graph().draw_mermaid())
 
 
-async def main():
-    request_context = await get_demo_context()
-    result = await app.ainvoke(
-        {
-            "messages": [
-                HumanMessage(
-                    content="i have a data base exam coming up in 2 weeks, and i want to make a study plan for it."
-                )
-            ],
-        },
-        context=request_context,
-    )
+async def main(thread_id):
+    async with AsyncPostgresSaver.from_conn_string(
+        config.checkpoint_database_url
+    ) as checkpointer:
+        app = graph.compile(checkpointer=checkpointer)
+        snapshot = await app.aget_state({"configurable": {"thread_id": str(thread_id)}})
 
-    print(result["draft_schedule"].model_dump_json(indent=2))
+        print(snapshot.values)
+
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(thread_id="50eb8fe8-572b-464c-afab-b68de691b817"))
