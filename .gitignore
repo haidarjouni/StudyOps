@@ -214,3 +214,4 @@ AI/
 assistant/api_client/tests.py/test_client.py
 graph_visualization.png
 assistant/PLANNING_WORKFLOW.md
+request.http
