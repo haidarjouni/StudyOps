@@ -3,8 +3,9 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from langchain.messages import HumanMessage, SystemMessage, ToolMessage
+from langgraph.graph import END
 from langgraph.runtime import Runtime
-
+from langgraph.types import Command, interrupt
 from planning import build_planning_constraints
 from prompts import (CONTEXT_RETRIEVAL_PROMPT, GENERATE_DRAFT_SCHEDULE_PROMPT,
                      RESOLVE_PLANNING_REQUEST_PROMPT,
@@ -409,3 +410,68 @@ async def revise_draft_schedule(
             ]
 
     raise ValueError("Draft revision failed after three attempts")
+
+
+def review_schedule(
+    state: AgentState,
+) -> Command:
+    """Pause for draft review, then route the user's decision."""
+    decision = interrupt(
+        {
+            "type": "schedule_review",
+            "title": "Review your study schedule",
+            "draft": state["draft_schedule"].model_dump(mode="json"),
+            "options": [
+                {
+                    "value": "approve",
+                    "label": "Approve schedule",
+                    "variant": "success",
+                    "requires_feedback": False,
+                },
+                {
+                    "value": "edit",
+                    "label": "Request changes",
+                    "variant": "secondary",
+                    "requires_feedback": True,
+                    "feedback": {
+                        "label": "What would you like to change?",
+                        "placeholder": "Move Monday's session to Tuesday...",
+                        "min_length": 1,
+                    },
+                },
+                {
+                    "value": "cancel",
+                    "label": "Cancel",
+                    "variant": "danger",
+                    "requires_feedback": False,
+                    "requires_confirmation": True,
+                    "confirmation_message": "Discard this draft schedule?",
+                },
+            ],
+        }
+    )
+
+    if not isinstance(decision, dict):
+        raise ValueError("Schedule review decision must be an object")
+
+    action = decision.get("action")
+
+    if action == "approve":
+        return Command(goto="create_schedule")
+
+    if action == "edit":
+        feedback = decision.get("feedback")
+        if not isinstance(feedback, str) or not feedback.strip():
+            raise ValueError("Feedback is required for 'edit' action")
+        return Command(
+            update={"user_revision_request": feedback.strip()},
+            goto="revise_from_user_feedback",
+        )
+
+    if action == "cancel":
+        return Command(goto=END)
+
+    raise ValueError(f"Unknown review action: {action}")
+
+def create_schedule(state: AgentState):
+    pass
