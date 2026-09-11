@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
 from rest_framework.test import APITestCase
+from study_session.models import StudySession
 from subject.models import Subject
 
 from study_task.models import StudyTask
@@ -83,6 +84,62 @@ class StudyTaskViewTestCase(APITestCase):
         self.assertEqual(created_task.user, self.user)
         self.assertEqual(created_task.subject, self.subject)
         self.assertEqual(created_task.title, self.create_data["title"])
+
+    def test_create_schedule(self):
+        response = self.client.post(
+            reverse("studytask-create-schedule"),
+            {
+                "drafts": [
+                    {
+                        "task": self.create_data,
+                        "sessions": [
+                            {
+                                "subject_id": self.subject.pk,
+                                "start_at": "2026-09-09T17:00:00Z",
+                                "end_at": "2026-09-09T18:00:00Z",
+                                "status": "scheduled",
+                            },
+                            {
+                                "subject_id": self.subject.pk,
+                                "start_at": "2026-09-10T17:00:00Z",
+                                "end_at": "2026-09-10T17:30:00Z",
+                                "status": "scheduled",
+                            },
+                        ],
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data["drafts"]), 1)
+
+        created = response.data["drafts"][0]
+        task = StudyTask.objects.get(pk=created["task"]["id"])
+        sessions = StudySession.objects.filter(task=task)
+
+        self.assertEqual(task.user, self.user)
+        self.assertEqual(sessions.count(), 2)
+        self.assertEqual(len(created["sessions"]), 2)
+
+    def test_create_schedule_rejects_an_empty_sessions_list(self):
+        response = self.client.post(
+            reverse("studytask-create-schedule"),
+            {
+                "drafts": [
+                    {
+                        "task": self.create_data,
+                        "sessions": [],
+                    }
+                ]
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(StudyTask.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(StudySession.objects.filter(user=self.user).count(), 0)
 
     def test_study_task_list_view(self):
         response = self.client.get(reverse("studytask-list"))

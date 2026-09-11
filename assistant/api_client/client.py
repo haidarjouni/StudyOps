@@ -8,7 +8,7 @@ from pydantic import TypeAdapter, ValidationError
 from schemas import (StudyPreference, StudyPreferenceUpdate, StudySession,
                      StudySessionCreate, StudySessionUpdate, StudyTask,
                      StudyTaskCreate, StudyTaskUpdate, Subject, SubjectCreate,
-                     SubjectUpdate)
+                     SubjectUpdate, DraftSchedule)
 
 from .exceptions import (APIAuthenticationError, APIResponseError,
                          APITransportError, APIValidationError)
