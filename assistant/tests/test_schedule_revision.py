@@ -42,6 +42,7 @@ def make_state(**changes):
             )
         ],
         "schedule_revision_count": 0,
+        "user_revision_request": None,
     }
     values.update(changes)
     return values
@@ -65,6 +66,8 @@ async def test_revision_returns_parsed_schedule_and_increments_count():
     assert result == {
         "draft_schedule": revised_schedule,
         "schedule_revision_count": 1,
+        "validation_notes": [],
+        "user_revision_request": None,
     }
 
 
@@ -100,6 +103,55 @@ async def test_revision_rejects_a_fourth_attempt():
     with pytest.raises(ValueError, match="already been revised three times"):
         await revise_draft_schedule(
             make_state(schedule_revision_count=3),
+            model,
+        )
+
+    assert model.calls == []
+
+
+@pytest.mark.asyncio
+async def test_user_feedback_revision_does_not_increment_validation_count():
+    revised_schedule = make_state()["draft_schedule"]
+    model = StructuredOutputModel(
+        [
+            {
+                "parsed": revised_schedule,
+                "parsing_error": None,
+                "raw": AIMessage(content=""),
+            }
+        ]
+    )
+    state = make_state(
+        validation_notes=[],
+        user_revision_request="Move the session to the afternoon",
+        schedule_revision_count=2,
+    )
+
+    result = await revise_draft_schedule(state, model)
+
+    assert result["schedule_revision_count"] == 2
+    assert result["validation_notes"] == []
+    assert result["user_revision_request"] is None
+    assert "Move the session to the afternoon" in model.calls[0][0].content
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("validation_notes", "user_revision_request"),
+    [([], None), (make_state()["validation_notes"], "Change the schedule")],
+)
+async def test_revision_requires_exactly_one_instruction_source(
+    validation_notes,
+    user_revision_request,
+):
+    model = StructuredOutputModel([])
+
+    with pytest.raises(ValueError, match="Exactly one"):
+        await revise_draft_schedule(
+            make_state(
+                validation_notes=validation_notes,
+                user_revision_request=user_revision_request,
+            ),
             model,
         )
 

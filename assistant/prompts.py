@@ -241,3 +241,37 @@ the complete schedule respect the required buffer. For an
 `estimated_minutes_exceeded` note, shorten or remove sessions so the task's
 total scheduled time does not exceed its estimate.
 """
+
+
+REVISE_FROM_USER_FEEDBACK_PROMPT = """
+You are revising an already valid draft study schedule based on user feedback.
+
+Original planning request:
+{user_request}
+
+User's requested changes:
+<user_feedback>
+{user_feedback}
+</user_feedback>
+
+Current draft:
+{draft_schedule}
+
+Available subjects:
+{subjects}
+
+Planning constraints:
+{planning_constraints}
+
+Revise the draft to satisfy the user's requested changes wherever they are
+compatible with the planning constraints.
+
+Requirements:
+1. Never violate the planning window or available periods.
+2. Preserve parts of the draft that the user did not ask to change.
+3. Keep existing draft task and session IDs stable when the corresponding
+   items are preserved.
+4. Create new IDs only for genuinely new tasks or sessions.
+5. Remove an item only when the user's feedback requires its removal.
+6. Return the complete revised DraftSchedule, not only the changed fields.
+"""

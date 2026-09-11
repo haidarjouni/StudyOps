@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from langchain.messages import HumanMessage, SystemMessage, ToolMessage
@@ -7,9 +8,13 @@ from langgraph.graph import END
 from langgraph.runtime import Runtime
 from langgraph.types import Command, interrupt
 from planning import build_planning_constraints
-from prompts import (CONTEXT_RETRIEVAL_PROMPT, GENERATE_DRAFT_SCHEDULE_PROMPT,
-                     RESOLVE_PLANNING_REQUEST_PROMPT,
-                     REVISE_DRAFT_SCHEDULE_PROMPT)
+from prompts import (
+    CONTEXT_RETRIEVAL_PROMPT,
+    GENERATE_DRAFT_SCHEDULE_PROMPT,
+    RESOLVE_PLANNING_REQUEST_PROMPT,
+    REVISE_DRAFT_SCHEDULE_PROMPT,
+    REVISE_FROM_USER_FEEDBACK_PROMPT,
+)
 from runtime_context import RequestContext
 from schemas import PlanningSubject, StudyPreference, ValidationNote
 from state import AgentState
@@ -349,11 +354,21 @@ async def revise_draft_schedule(
     state: AgentState,
     model,
 ):
-    """Revise the draft schedule based on validation notes."""
+    """Revise the draft schedule from validation notes or user feedback."""
 
-    validation_notes = state["validation_notes"]
-    if not validation_notes:
-        raise ValueError("No validation notes to address in draft schedule")
+    validation_notes = state.get("validation_notes") or []
+    user_feedback = state.get("user_revision_request")
+    has_validation_notes = bool(validation_notes)
+    has_user_feedback = bool(user_feedback and user_feedback.strip())
+
+    if has_validation_notes == has_user_feedback:
+        raise ValueError(
+            "Exactly one of validation_notes or user_revision_request is required"
+        )
+
+    revision_count = state.get("schedule_revision_count", 0)
+    if has_validation_notes and revision_count >= 3:
+        raise ValueError("Draft schedule has already been revised three times")
 
     draft_schedule = state["draft_schedule"]
 
@@ -371,20 +386,34 @@ async def revise_draft_schedule(
         raise ValueError("No subjects available, cannot revise draft schedule")
 
     user_request = get_latest_user_request(state)
-
-    system_message = SystemMessage(
-        content=REVISE_DRAFT_SCHEDULE_PROMPT.format(
-            user_request=user_request,
-            subjects=json.dumps(
-                [subject.model_dump(mode="json") for subject in subjects], indent=2
-            ),
-            draft_schedule=draft_schedule.model_dump_json(indent=2),
-            validation_notes=json.dumps(
-                [note.model_dump(mode="json") for note in validation_notes], indent=2
-            ),
-            planning_constraints=planning_constraints.model_dump_json(indent=2),
+    if has_validation_notes:
+        system_message = SystemMessage(
+            content=REVISE_DRAFT_SCHEDULE_PROMPT.format(
+                user_request=user_request,
+                subjects=json.dumps(
+                    [subject.model_dump(mode="json") for subject in subjects], indent=2
+                ),
+                draft_schedule=draft_schedule.model_dump_json(indent=2),
+                validation_notes=json.dumps(
+                    [note.model_dump(mode="json") for note in validation_notes], indent=2
+                ),
+                planning_constraints=planning_constraints.model_dump_json(indent=2),
+            )
         )
-    )
+        next_revision_count = revision_count + 1
+    else:
+        system_message = SystemMessage(
+            content=REVISE_FROM_USER_FEEDBACK_PROMPT.format(
+                user_request=user_request,
+                user_feedback=user_feedback,
+                draft_schedule=draft_schedule.model_dump_json(indent=2),
+                planning_constraints=planning_constraints.model_dump_json(indent=2),
+                subjects=json.dumps(
+                    [subject.model_dump(mode="json") for subject in subjects], indent=2
+                ),
+            )
+        )
+        next_revision_count = revision_count
 
     messages = [system_message]
     for attempt in range(3):
@@ -392,9 +421,9 @@ async def revise_draft_schedule(
         if response["parsing_error"] is None and response["parsed"] is not None:
             return {
                 "draft_schedule": response["parsed"],
-                "schedule_revision_count": (
-                    state.get("schedule_revision_count", 0) + 1
-                ),
+                "schedule_revision_count": next_revision_count,
+                "validation_notes": [],
+                "user_revision_request": None,
             }
 
         if attempt < 2:
@@ -414,7 +443,9 @@ async def revise_draft_schedule(
 
 def review_schedule(
     state: AgentState,
-) -> Command:
+) -> Command[
+    Literal["create_schedule", "revise_draft_schedule", "__end__"]
+]:
     """Pause for draft review, then route the user's decision."""
     decision = interrupt(
         {
@@ -465,13 +496,14 @@ def review_schedule(
             raise ValueError("Feedback is required for 'edit' action")
         return Command(
             update={"user_revision_request": feedback.strip()},
-            goto="revise_from_user_feedback",
+            goto="revise_draft_schedule",
         )
 
     if action == "cancel":
         return Command(goto=END)
 
     raise ValueError(f"Unknown review action: {action}")
+
 
 def create_schedule(state: AgentState):
     pass

@@ -13,4 +13,4 @@ class AgentState(MessagesState):
     subjects: list[PlanningSubject]
     validation_notes: list[ValidationNote]
     schedule_revision_count: int
-    user_revision_request: str
+    user_revision_request: str | None
