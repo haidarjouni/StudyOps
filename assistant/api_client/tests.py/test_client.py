@@ -5,6 +5,7 @@ import pytest
 
 from api_client.client import StudyOpsAPIClient
 from api_client.exceptions import APIResponseError
+from schemas.draft_schedule import DraftSchedule
 from schemas.study_preference import StudyPreferenceUpdate
 from schemas.study_session import StudySessionCreate, StudySessionUpdate
 from schemas.study_task import StudyTaskCreate, StudyTaskUpdate
@@ -638,3 +639,98 @@ async def test_delete_study_task():
         )  # calling the delete_study_task method of the API client
 
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_create_draft_schedule():
+    created_task = study_task_response_data(
+        title="Prepare for database exam",
+        description="Review the supplied database exam material.",
+        task_type="exam",
+        estimated_minutes=90,
+    )
+    created_session = session_response_data(
+        start_at="2026-09-12T16:00:00Z",
+        end_at="2026-09-12T17:30:00Z",
+    )
+    created_session["task"] = created_task
+
+    def fake_api(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/api/study_task/schedule/"
+        assert json.loads(request.content) == {
+            "drafts": [
+                {
+                    "task": {
+                        "subject": 2,
+                        "title": "Prepare for database exam",
+                        "description": "Review the supplied database exam material.",
+                        "task_type": "exam",
+                        "task_status": "todo",
+                        "task_priority": "high",
+                        "estimated_minutes": 90,
+                        "due_date": "2026-09-15T18:00:00Z",
+                    },
+                    "sessions": [
+                        {
+                            "subject_id": 2,
+                            "start_at": "2026-09-12T16:00:00Z",
+                            "end_at": "2026-09-12T17:30:00Z",
+                            "status": "scheduled",
+                        }
+                    ],
+                }
+            ]
+        }
+        return httpx.Response(
+            201,
+            json={
+                "drafts": [
+                    {
+                        "task": created_task,
+                        "sessions": [created_session],
+                    }
+                ]
+            },
+        )
+
+    draft_schedule = DraftSchedule.model_validate(
+        {
+            "drafts": [
+                {
+                    "task": {
+                        "draft_task_id": "database_exam",
+                        "subject": 2,
+                        "title": "Prepare for database exam",
+                        "description": "Review the supplied database exam material.",
+                        "task_type": "exam",
+                        "task_status": "todo",
+                        "task_priority": "high",
+                        "estimated_minutes": 90,
+                        "due_date": "2026-09-15T18:00:00Z",
+                    },
+                    "study_sessions": [
+                        {
+                            "draft_session_id": "database_exam_session_1",
+                            "draft_task_id": "database_exam",
+                            "subject_id": 2,
+                            "task_id": None,
+                            "start_at": "2026-09-12T16:00:00Z",
+                            "end_at": "2026-09-12T17:30:00Z",
+                            "status": "scheduled",
+                        }
+                    ],
+                }
+            ]
+        }
+    )
+
+    async with StudyOpsAPIClient(
+        "http://test/api/",
+        transport=httpx.MockTransport(fake_api),
+    ) as api:
+        created = await api.create_draft_schedule(draft_schedule)
+
+    assert created.drafts[0].task.id == 4
+    assert created.drafts[0].sessions[0].task is not None
+    assert created.drafts[0].sessions[0].task.id == 4

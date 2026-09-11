@@ -5,10 +5,11 @@ from typing import Any, TypeVar
 import httpx
 from pydantic import TypeAdapter, ValidationError
 
-from schemas import (StudyPreference, StudyPreferenceUpdate, StudySession,
-                     StudySessionCreate, StudySessionUpdate, StudyTask,
-                     StudyTaskCreate, StudyTaskUpdate, Subject, SubjectCreate,
-                     SubjectUpdate, DraftSchedule)
+from schemas import (DraftSchedule, ScheduleCreate, ScheduleItemCreate,
+                     ScheduleResponse, StudyPreference, StudyPreferenceUpdate,
+                     StudySession, StudySessionCreate, StudySessionUpdate,
+                     StudyTask, StudyTaskCreate, StudyTaskUpdate, Subject,
+                     SubjectCreate, SubjectUpdate)
 
 from .exceptions import (APIAuthenticationError, APIResponseError,
                          APITransportError, APIValidationError)
@@ -350,3 +351,37 @@ class StudyOpsAPIClient:
             "DELETE",
             f"study_task/{study_task_id}/",
         )  # sends a delete request to delete the study task with the specified id
+
+    async def create_draft_schedule(
+        self,
+        draft_schedule: DraftSchedule,
+    ) -> ScheduleResponse:
+        schedule = ScheduleCreate(
+            drafts=[
+                ScheduleItemCreate(
+                    task=StudyTaskCreate.model_validate(
+                        draft.task.model_dump(exclude={"draft_task_id"})
+                    ),
+                    sessions=[
+                        StudySessionCreate.model_validate(
+                            session.model_dump(
+                                exclude={
+                                    "draft_session_id",
+                                    "draft_task_id",
+                                    "task_id",
+                                }
+                            )
+                        )
+                        for session in draft.study_sessions
+                    ],
+                )
+                for draft in draft_schedule.drafts
+            ]
+        )
+
+        response = await self._request(
+            "POST",
+            "study_task/schedule/",
+            json=schedule.model_dump(mode="json", exclude_none=True),
+        )
+        return self._validate(response, TypeAdapter(ScheduleResponse))
