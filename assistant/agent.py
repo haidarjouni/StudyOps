@@ -161,11 +161,10 @@ async def main(
 if __name__ == "__main__":
     result = asyncio.run(
         main(
-            thread_id="8c3a0bbd-31f2-42a0-ad85-695dc3159f15",
+            thread_id="ff2a5ab0-c116-4636-895c-42f50643d146",
             command={
-                "action": "approve",
-                "feedback": "",
-            },
+                "action": "approve"
+            }
         )
     )
     print(result)
