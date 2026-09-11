@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from api_client import StudyOpsAPIClient
+from config import Config
 from langchain.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.graph import END
 from langgraph.runtime import Runtime
@@ -16,7 +18,8 @@ from prompts import (
     REVISE_FROM_USER_FEEDBACK_PROMPT,
 )
 from runtime_context import RequestContext
-from schemas import PlanningSubject, StudyPreference, ValidationNote
+from schemas import (PlanningSubject, ScheduleResponse, StudyPreference,
+                     ValidationNote)
 from state import AgentState
 
 _MISSING = object()
@@ -505,5 +508,22 @@ def review_schedule(
     raise ValueError(f"Unknown review action: {action}")
 
 
-def create_schedule(state: AgentState):
-    pass
+async def create_schedule(
+    state: AgentState,
+    runtime: Runtime[RequestContext],
+) -> dict[str, ScheduleResponse]:
+    """Persist the approved draft schedule through the StudyOps API."""
+
+    draft_schedule = state.get("draft_schedule")
+    if draft_schedule is None or not draft_schedule.drafts:
+        raise ValueError("Cannot create a schedule without an approved draft")
+
+    settings = Config()
+    async with StudyOpsAPIClient(
+        settings.base_drf_api,
+        access_token=runtime.context.access_token,
+        refresh_token=runtime.context.refresh_token,
+    ) as client:
+        schedule = await client.create_draft_schedule(draft_schedule)
+
+    return {"schedule": schedule}

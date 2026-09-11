@@ -1,7 +1,7 @@
 from langgraph.graph import MessagesState
 
 from schemas import (DraftSchedule, PlanningConstraints, PlanningSubject,
-                     ResolvedPlanningRequest, ValidationNote)
+                     ResolvedPlanningRequest, ScheduleResponse, ValidationNote)
 
 
 class AgentState(MessagesState):
@@ -14,3 +14,4 @@ class AgentState(MessagesState):
     validation_notes: list[ValidationNote]
     schedule_revision_count: int
     user_revision_request: str | None
+    schedule: ScheduleResponse
