@@ -30,25 +30,25 @@ class StudyTaskViewSet(ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="schedule")
     def create_schedule(self, request):
-        #serialized the request
+        # serialized the request
         serializer = ScheduleCreateSerializer(
             data=request.data,
             # sending the context of the request to the serializer so that it can access the request user and other information
             context=self.get_serializer_context(),
         )
-        #validate
+        # validate
         serializer.is_valid(raise_exception=True)
 
-        #a tuple of the created task and its sessions will be appended to this list
+        # a tuple of the created task and its sessions will be appended to this list
         created_drafts = []
         with transaction.atomic():
             for draft in serializer.validated_data["drafts"]:
-                # create the task object 
+                # create the task object
                 task = StudyTask.objects.create(
                     user=request.user,
                     **draft["task"],
                 )
-                #create the sessions 
+                # create the sessions
                 sessions = [
                     StudySession.objects.create(
                         user=request.user,
@@ -61,7 +61,7 @@ class StudyTaskViewSet(ModelViewSet):
                     )
                     for session in draft["sessions"]
                 ]
-                #append them in a tuple
+                # append them in a tuple
                 created_drafts.append((task, sessions))
 
         serializer_context = self.get_serializer_context()
