@@ -5,7 +5,7 @@ from typing import Any, Literal
 from langchain.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.graph import START, StateGraph
+from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.types import Command
 
@@ -19,6 +19,7 @@ from nodes import (
     retrieve_context,
     revise_draft_schedule,
     review_schedule,
+    summary_workflow,
     validate_schedule,
 )
 from runtime_context import RequestContext
@@ -61,6 +62,7 @@ revise_draft_schedule_node = partial(
 )
 
 retrieve_context_node = partial(retrieve_context, model=model_with_tools)
+final_summary_node = partial(summary_workflow, model=model)
 
 
 def route_after_context_retrieval(
@@ -94,6 +96,7 @@ graph.add_node("validate_schedule", validate_schedule)
 graph.add_node("revise_draft_schedule", revise_draft_schedule_node)
 graph.add_node("review_schedule", review_schedule)
 graph.add_node("create_schedule", create_schedule)
+graph.add_node("final_summary", final_summary_node)
 
 graph.add_edge(START, "resolve_planning_request")
 graph.add_edge("resolve_planning_request", "retrieve_context")
@@ -103,6 +106,8 @@ graph.add_edge("collect_constraints", "generate_draft_schedule")
 graph.add_edge("generate_draft_schedule", "validate_schedule")
 graph.add_conditional_edges("validate_schedule", route_after_validation)
 graph.add_edge("revise_draft_schedule", "validate_schedule")
+graph.add_edge("create_schedule", "final_summary")
+graph.add_edge("final_summary", END)
 # print(app.get_graph().draw_mermaid())
 
 
@@ -161,7 +166,7 @@ async def main(
 if __name__ == "__main__":
     result = asyncio.run(
         main(
-            thread_id="ff2a5ab0-c116-4636-895c-42f50643d146",
+            thread_id="dff7dad3-72f0-4d40-88e5-f1723c206a71",
             command={
                 "action": "approve"
             }

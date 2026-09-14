@@ -12,6 +12,7 @@ from langgraph.types import Command, interrupt
 from planning import build_planning_constraints
 from prompts import (
     CONTEXT_RETRIEVAL_PROMPT,
+    FINAL_SUMMARY_PROMPT,
     GENERATE_DRAFT_SCHEDULE_PROMPT,
     RESOLVE_PLANNING_REQUEST_PROMPT,
     REVISE_DRAFT_SCHEDULE_PROMPT,
@@ -527,3 +528,23 @@ async def create_schedule(
         schedule = await client.create_draft_schedule(draft_schedule)
 
     return {"schedule": schedule}
+
+
+async def summary_workflow(
+    state: AgentState,
+    runtime: Runtime[RequestContext],
+    model,
+):
+    """Summarize the API-confirmed schedule and append the final message."""
+    schedule = state.get("schedule")
+    if schedule is None:
+        raise ValueError("Cannot summarize a schedule that has not been created")
+
+    timezone_name, _ = _user_timezone(runtime.context.timezone)
+    system_message = FINAL_SUMMARY_PROMPT.format(
+        schedule=schedule.model_dump_json(indent=2),
+        timezone=timezone_name,
+    )
+
+    response = await model.ainvoke([SystemMessage(content=system_message)])
+    return {"messages": [response], "schedule": schedule}
