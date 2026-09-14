@@ -74,7 +74,8 @@ def test_resume_without_interrupt_returns_conflict(endpoint):
 
 
 @pytest.mark.asyncio
-async def test_agent_uses_caller_context(monkeypatch):
+@pytest.mark.parametrize("cancel", [False, True])
+async def test_agent_uses_caller_context(monkeypatch, cancel):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     import agent
 
@@ -86,20 +87,25 @@ async def test_agent_uses_caller_context(monkeypatch):
         agent, "config", SimpleNamespace(checkpoint_database_url="unused")
     )
     graph_app = SimpleNamespace(
-        aget_state=AsyncMock(return_value=SimpleNamespace(tasks=[])),
+        aget_state=AsyncMock(return_value=SimpleNamespace(tasks=[SimpleNamespace(interrupts=[SimpleNamespace(value={"type": "schedule_review"})])] if cancel else [])),
         ainvoke=AsyncMock(return_value={"messages": []}),
     )
     monkeypatch.setattr(agent.graph, "compile", MagicMock(return_value=graph_app))
 
-    await agent.main(
+    result = await agent.main(
         "existing-thread",
         "caller-access",
         "caller-refresh",
-        user_request="Plan tomorrow",
+        user_request=None if cancel else "Plan tomorrow",
+        command={"action": "cancel"} if cancel else None,
         time_zone="UTC",
     )
 
     kwargs = graph_app.ainvoke.await_args.kwargs
+    graph_app.ainvoke.assert_awaited_once()
+    if cancel:
+        assert result == {"status": "cancelled"}
+        assert graph_app.ainvoke.await_args.args[0].resume == {"action": "cancel"}
     assert kwargs["context"].access_token == "caller-access"
     assert kwargs["context"].refresh_token == "caller-refresh"
     assert kwargs["context"].timezone == "UTC"

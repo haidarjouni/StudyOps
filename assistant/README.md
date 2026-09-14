@@ -25,6 +25,11 @@ and `edit` (which also requires nonblank `feedback`). Supply exactly one of
 review returns 409. Credentials are passed into runtime context, not graph state.
 Checkpoint tables must already be initialized, as described below.
 
+Responses contain only frontend output: `{"status": "interrupted", "interrupts": [...]}`
+for review (including after edits), `{"status": "completed", "summary": "..."}`
+after approval, or `{"status": "cancelled"}` after cancellation. The graph's
+messages, tool results, and planning state remain in its checkpoint.
+
 For local development, run `python -m uvicorn main:app --port 8001 --reload`
 from the `assistant` directory after installing its requirements.
 

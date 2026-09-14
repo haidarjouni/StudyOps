@@ -9,6 +9,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.types import Command
 
 from config import Config
+from chat_output import format_chat_output
 from nodes import (
     collect_constraints,
     create_schedule,
@@ -153,11 +154,14 @@ async def main(
                     "interrupts": [item.value for item in pending_interrupts],
                 }
             # if there is a command, resume the interrupted request
-            return await app.ainvoke(
+            result = await app.ainvoke(
                 Command(resume=command),
                 context=request_context,
                 config=run_config,
             )
+            if command.get("action") == "cancel":
+                return {"status": "cancelled"}
+            return format_chat_output(result)
         # no interrupted request and command is not none, raise error because there is no pending interrupt to resume
         if command is not None:
             raise NoPendingInterruptError(
@@ -169,8 +173,9 @@ async def main(
                 "A non-empty user_request is required when starting a graph run"
             )
 
-        return await app.ainvoke(
+        result = await app.ainvoke(
             {"messages": [HumanMessage(content=user_request.strip())]},
             context=request_context,
             config=run_config,
         )
+        return format_chat_output(result)
