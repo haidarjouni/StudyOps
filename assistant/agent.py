@@ -1,4 +1,3 @@
-import asyncio
 from functools import partial
 from typing import Any, Literal
 
@@ -10,7 +9,6 @@ from langgraph.prebuilt import ToolNode
 from langgraph.types import Command
 
 from config import Config
-from local_testing import get_demo_context
 from nodes import (
     collect_constraints,
     create_schedule,
@@ -108,13 +106,21 @@ graph.add_conditional_edges("validate_schedule", route_after_validation)
 graph.add_edge("revise_draft_schedule", "validate_schedule")
 graph.add_edge("create_schedule", "final_summary")
 graph.add_edge("final_summary", END)
+
 # print(app.get_graph().draw_mermaid())
+
+
+class NoPendingInterruptError(ValueError):
+    """The requested thread has no review to resume."""
 
 
 async def main(
     thread_id: str,
+    user_token: str,
+    refresh_token: str,
     user_request: str | None = None,
     command: dict[str, Any] | None = None,
+    time_zone: str = "Asia/Beirut",
 ):
     async with AsyncPostgresSaver.from_conn_string(
         config.checkpoint_database_url
@@ -125,7 +131,12 @@ async def main(
                 "thread_id": str(thread_id),
             }
         }
-        request_context = await get_demo_context()
+
+        request_context = RequestContext(
+            access_token=user_token,
+            refresh_token=refresh_token,
+            timezone=time_zone,
+        )
 
         snapshot = await app.aget_state(run_config)
         pending_interrupts = [
@@ -147,9 +158,11 @@ async def main(
                 context=request_context,
                 config=run_config,
             )
-        #no interrupted request and command is not none, raise error because there is no pending interrupt to resume
+        # no interrupted request and command is not none, raise error because there is no pending interrupt to resume
         if command is not None:
-            raise ValueError("Cannot resume a thread that has no pending interrupt")
+            raise NoPendingInterruptError(
+                "Cannot resume a thread that has no pending interrupt"
+            )
         # empty requests not acceptable
         if not isinstance(user_request, str) or not user_request.strip():
             raise ValueError(
@@ -161,15 +174,3 @@ async def main(
             context=request_context,
             config=run_config,
         )
-
-
-if __name__ == "__main__":
-    result = asyncio.run(
-        main(
-            thread_id="dff7dad3-72f0-4d40-88e5-f1723c206a71",
-            command={
-                "action": "approve"
-            }
-        )
-    )
-    print(result)

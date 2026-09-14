@@ -13,7 +13,7 @@ from .study_task import (StudyTask, StudyTaskCreate, StudyTaskDelete,
                          StudyTaskUpdate, TaskPriority, TaskStatus, TaskType)
 from .subject import Subject, SubjectCreate, SubjectDelete, SubjectUpdate
 from .validation import ValidationNote
-
+from .chat_request import ChatRequest
 __all__ = [
     "DailyPlanningPeriod",
     "Draft",
@@ -47,4 +47,5 @@ __all__ = [
     "TaskStatus",
     "TaskType",
     "ValidationNote",
+    "ChatRequest",
 ]

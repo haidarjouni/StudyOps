@@ -1,5 +1,35 @@
 # Running the planning agent
 
+## Chat endpoint
+
+Start the assistant HTTP server with `docker compose up --build assistant`.
+The endpoint is `POST http://localhost:8001/chat`; interactive request docs
+are available at `http://localhost:8001/docs`.
+
+Send JSON using an existing thread ID created by the frontend/API:
+
+```json
+{
+  "thread_id": "existing-thread-id",
+  "user_token": "access-token",
+  "refresh_token": "refresh-token",
+  "time_zone": "Asia/Beirut",
+  "user_input": "Plan my study sessions for tomorrow"
+}
+```
+
+For a review response, replace `user_input` with `command`, for example
+`"command": {"action": "approve"}`. Supported actions are `approve`, `cancel`,
+and `edit` (which also requires nonblank `feedback`). Supply exactly one of
+`user_input` or `command`. Invalid bodies return 422; a command without a pending
+review returns 409. Credentials are passed into runtime context, not graph state.
+Checkpoint tables must already be initialized, as described below.
+
+For local development, run `python -m uvicorn main:app --port 8001 --reload`
+from the `assistant` directory after installing its requirements.
+
+The request body follows the [FastAPI request model pattern](https://fastapi.tiangolo.com/tutorial/body/).
+
 The agent uses `ChatOpenAI` with `gpt-5.6-terra` and low reasoning effort.
 Tool retrieval overrides reasoning effort to `none`, as required for Terra
 function tools on the Chat Completions endpoint.
@@ -21,7 +51,7 @@ database services available:
 
 ```powershell
 docker compose build assistant
-docker compose run --rm assistant python agent.py YOUR_EXISTING_THREAD_ID
+docker compose up assistant
 ```
 
 `Config` builds the checkpoint URL from the existing `POSTGRES_USER`,
