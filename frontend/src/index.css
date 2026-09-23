@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@import './styles.css';
+
+/* The Vite starter rules are kept isolated until the starter files are removed. */
+@media (width < 0px) {
 
 :root {
   --text: #6b6375;
@@ -110,4 +114,5 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
 }
