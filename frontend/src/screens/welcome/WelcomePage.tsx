@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react'
+import { HowItWorksSection } from '../../components/HowItWorksSection'
+
 function BrandMark() {
   return (
     <span
@@ -268,6 +271,8 @@ export function WelcomePage() {
           <PlannerPreview />
         </section>
 
+        <HowItWorksSection />
+
         <section className="border-t border-primary/15 bg-surface-card/70">
           <div className="mx-auto grid w-full max-w-7xl gap-7 px-4 py-8 sm:grid-cols-3 sm:px-6 sm:py-10 lg:px-8">
             <div className="flex gap-4">
@@ -313,4 +318,3 @@ export function WelcomePage() {
     </div>
   )
 }
-import type { ReactNode } from 'react'
