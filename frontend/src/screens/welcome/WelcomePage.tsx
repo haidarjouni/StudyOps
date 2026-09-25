@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router'
 import { HowItWorksSection } from '../../components/HowItWorksSection'
 
 function BrandMark() {
@@ -195,12 +196,12 @@ export function WelcomePage() {
           >
             Log in
           </button>
-          <button
-            type="button"
-            className="min-h-11 rounded-full bg-accent px-6 text-sm font-extrabold text-text-strong shadow-accent-glow transition duration-200 hover:-translate-y-0.5 hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 active:bg-accent-dark motion-reduce:transform-none motion-reduce:transition-none"
+          <Link
+            to="/register"
+            className="inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-sm font-extrabold text-text-strong shadow-accent-glow transition duration-200 hover:-translate-y-0.5 hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 active:bg-accent-dark motion-reduce:transform-none motion-reduce:transition-none"
           >
             Create account
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -238,12 +239,12 @@ export function WelcomePage() {
             </p>
 
             <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <button
-                type="button"
-                className="min-h-13 rounded-xl bg-accent px-7 py-3.5 text-base font-extrabold text-text-strong shadow-accent-glow transition duration-200 hover:-translate-y-0.5 hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 active:bg-accent-dark motion-reduce:transform-none motion-reduce:transition-none"
+              <Link
+                to="/register"
+                className="inline-flex min-h-13 items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-base font-extrabold text-text-strong shadow-accent-glow transition duration-200 hover:-translate-y-0.5 hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 active:bg-accent-dark motion-reduce:transform-none motion-reduce:transition-none"
               >
                 Create your account
-              </button>
+              </Link>
               <button
                 type="button"
                 className="min-h-13 rounded-xl border-2 border-primary bg-surface-card px-7 py-3 text-base font-extrabold text-primary-dark shadow-subtle transition duration-200 hover:-translate-y-0.5 hover:bg-primary-subtle focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none"
