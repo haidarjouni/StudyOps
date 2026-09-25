@@ -17,6 +17,10 @@ Before implementing anything, read these sources in order:
 4. [references/design.md](references/design.md).
 5. The existing frontend files relevant to the requested change.
 
+For work involving forms, validation, submissions, loaders, actions, or
+fetchers, also read
+[references/forms-actions-and-loaders.md](references/forms-actions-and-loaders.md).
+
 Do not begin implementation if any required source is unavailable or cannot be read. Report exactly what is missing. If the contract and implementation appear inconsistent, stop only the affected work and report the discrepancy instead of guessing.
 
 ## Authority and scope
