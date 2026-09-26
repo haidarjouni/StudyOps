@@ -8,20 +8,25 @@ function localTimezone(): string {
 }
 
 export function RegistrationPage() {
+    // fetcher is used to handle form submission so we don't have to navigate away from the page
   const fetcher = useFetcher<typeof registrationAction>()
   const formRef = useRef<HTMLFormElement>(null)
+  // checks the state of the fetcher to determine if the form is currently being submitted
   const isSubmitting = fetcher.state !== 'idle'
   const result = isSubmitting ? undefined : fetcher.data
+  // checks for any errors returned from the server after form submission
   const errors = result?.ok === false ? result.errors : undefined
   const fieldErrors = errors?.fieldErrors
-
+  // these const change on submission when the component is reloaded
   useEffect(() => {
     document.title = 'Create your account | StudyOps'
   }, [])
 
   useEffect(() => {
     if (!errors) return
+    // focus on the first invalid field or the error summary if there are errors
     const invalidField = formRef.current?.querySelector<HTMLInputElement>('[aria-invalid="true"]')
+    // focus on the first invalid field or the error summary if there are errors
     const summary = formRef.current?.querySelector<HTMLDivElement>('[data-error-summary]')
     ;(invalidField || summary)?.focus()
   }, [errors])
@@ -77,8 +82,9 @@ export function RegistrationPage() {
                 <h2 id="registration-title" className="text-2xl font-extrabold text-text-strong sm:text-3xl">Create your account</h2>
                 <p className="mt-2 text-sm leading-6 text-text-muted">A few details now will make your first plan feel like yours.</p>
               </div>
-
+                {/* This is the form for creating a new user account */}
               <fetcher.Form method="post" ref={formRef} noValidate aria-busy={isSubmitting} className="mt-7 space-y-8">
+                {/* checks for form wide errors not specific fields */}
                 {errors?.formErrors.length ? (
                   <div data-error-summary tabIndex={-1} role="alert" className="rounded-xl border border-coral/35 bg-coral/10 p-4 text-sm font-medium text-error-dark outline-none focus-visible:ring-3 focus-visible:ring-coral/40">
                     {errors.formErrors.map((message) => <p key={message}>{message}</p>)}

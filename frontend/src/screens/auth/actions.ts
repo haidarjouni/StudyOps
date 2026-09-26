@@ -17,9 +17,9 @@ interface RegistrationFormValues {
   preferred_session_minutes: number
   buffer_minutes: number
 }
-
+// to validate time input in the format HH:MM (24-hour format)
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Enter a valid time.')
-
+// zod form validator object
 const registrationSchema: z.ZodType<RegistrationFormValues> = z
   .strictObject({
     username: z.string().trim().min(1, 'Enter a username.').max(150, 'Use 150 characters or fewer.'),
@@ -39,25 +39,27 @@ const registrationSchema: z.ZodType<RegistrationFormValues> = z
     preferred_session_minutes: z.number().int().positive('Enter a number greater than zero.'),
     buffer_minutes: z.number().int().nonnegative('Enter zero or a positive number.'),
   })
+//   cross form validation to ensure that the earliest study time is before the latest study time and that the password and confirm password fields match
   .refine((values) => values.earliest_study_time < values.latest_study_time, {
     path: ['latest_study_time'],
     message: 'End time must be after start time.',
   })
+//   cross form validation to ensure that the password and confirm password fields match
   .refine((values) => values.password === values.confirm_password, {
     path: ['confirm_password'],
     message: 'Passwords do not match.',
   })
-
+// get the string value from formdata
 function stringValue(formData: FormData, name: string): string {
   const value = formData.get(name)
   return typeof value === 'string' ? value.trim() : ''
 }
-
+// gets number value from formdata, returns NaN if the value is an empty string
 function numberValue(formData: FormData, name: string): number {
   const value = stringValue(formData, name)
   return value === '' ? Number.NaN : Number(value)
 }
-
+// gets each form field value from the formdata and returns an object with the values
 function formCandidate(formData: FormData): RegistrationFormValues {
   const password = formData.get('password')
   const confirmation = formData.get('confirm_password')
@@ -74,7 +76,7 @@ function formCandidate(formData: FormData): RegistrationFormValues {
     buffer_minutes: numberValue(formData, 'buffer_minutes'),
   }
 }
-
+// gets the candidate object and returns a RegistrationInput object that can be sent to the backend API
 function toRegistrationInput(values: RegistrationFormValues): RegistrationInput {
   return {
     username: values.username,
@@ -89,13 +91,13 @@ function toRegistrationInput(values: RegistrationFormValues): RegistrationInput 
     },
   }
 }
-
+// flattens the error messages returned from the backend API into a more usable format
 function errorMessages(value: unknown): string[] {
   if (typeof value === 'string') return [value]
   if (Array.isArray(value)) return value.flatMap(errorMessages)
   return []
 }
-
+// parses the error messages returned from the backend API into a more usable format
 function backendErrors(body: unknown): RegistrationErrors {
   const errors: RegistrationErrors = { formErrors: [], fieldErrors: {} }
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -106,15 +108,21 @@ function backendErrors(body: unknown): RegistrationErrors {
   for (const [field, value] of Object.entries(body)) {
     if (field === 'study_preferences' && value && typeof value === 'object' && !Array.isArray(value)) {
       for (const [preference, messages] of Object.entries(value)) {
+        // if the preference is not a valid field, add the error message to the form errors
         if (preference === 'non_field_errors') {
           errors.formErrors.push(...errorMessages(messages))
-        } else if (preference in preferenceFields) {
+        }
+        // if the preference is a valid field, add the error message to the field errors
+        else if (preference in preferenceFields) {
           errors.fieldErrors[preference as RegistrationField] = errorMessages(messages)
         }
       }
+    // if the field is a valid account field, add the error message to the field errors
     } else if (field in accountFields) {
       errors.fieldErrors[field as RegistrationField] = errorMessages(value)
-    } else {
+    } 
+    // if the field is not a valid account field, add the error message to the form errors
+    else {
       errors.formErrors.push(...errorMessages(value))
     }
   }
@@ -135,14 +143,18 @@ const preferenceFields = {
 }
 
 function failure(errors: RegistrationErrors, status: number) {
+    // thats how i get to use fetcher.data in the component, it will be undefined if the form is being submitted
   return data({ ok: false as const, errors }, { status })
 }
 
 export async function registrationAction({ request }: ActionFunctionArgs) {
+    //get the request and get the canidates 
   const candidate = formCandidate(await request.formData())
+  // parse the canidate using the registration schema
   const parsed = registrationSchema.safeParse(candidate)
   if (!parsed.success) {
     const flattened = z.flattenError(parsed.error)
+    // return the flattened error with the status if validation fails, this will be used in the component to display the errors
     return failure(flattened, 400)
   }
 
@@ -160,6 +172,7 @@ export async function registrationAction({ request }: ActionFunctionArgs) {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
+        // send the registration input to the backend API as a JSON string
       body: JSON.stringify(toRegistrationInput(parsed.data)),
     })
 
