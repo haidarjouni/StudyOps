@@ -190,12 +190,12 @@ export function WelcomePage() {
         </div>
 
         <div className="hidden items-center gap-3 sm:flex">
-          <button
-            type="button"
-            className="min-h-11 rounded-full px-5 text-sm font-extrabold text-primary-dark transition-colors duration-200 hover:bg-primary-subtle focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-primary-subtle motion-reduce:transition-none"
+          <Link
+            to="/login"
+            className="min-h-11 rounded-full flex items-center px-5 text-sm font-extrabold text-primary-dark transition-colors duration-200 hover:bg-primary-subtle focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-primary-subtle motion-reduce:transition-none"
           >
             Log in
-          </button>
+          </Link>
           <Link
             to="/register"
             className="inline-flex min-h-11 items-center rounded-full bg-accent px-6 text-sm font-extrabold text-text-strong shadow-accent-glow transition duration-200 hover:-translate-y-0.5 hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 active:bg-accent-dark motion-reduce:transform-none motion-reduce:transition-none"
@@ -245,12 +245,12 @@ export function WelcomePage() {
               >
                 Create your account
               </Link>
-              <button
-                type="button"
+              <Link
+                to="/login"
                 className="min-h-13 rounded-xl border-2 border-primary bg-surface-card px-7 py-3 text-base font-extrabold text-primary-dark shadow-subtle transition duration-200 hover:-translate-y-0.5 hover:bg-primary-subtle focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 motion-reduce:transform-none motion-reduce:transition-none"
               >
                 Log in
-              </button>
+              </Link>
             </div>
 
             <ul className="mt-8 grid gap-3 text-sm font-bold text-text sm:grid-cols-3 sm:gap-4">

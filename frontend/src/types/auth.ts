@@ -24,3 +24,13 @@ export interface RegistrationErrors {
   formErrors: string[]
   fieldErrors: Partial<Record<RegistrationField, string[]>>
 }
+
+export interface LoginInput {
+  username: string
+  password: string
+}
+
+export interface LoginErrors {
+  formErrors: string[]
+  fieldErrors: Partial<Record<keyof LoginInput, string[]>>
+}

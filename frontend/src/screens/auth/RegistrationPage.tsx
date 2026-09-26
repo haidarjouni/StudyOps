@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Link, useFetcher } from 'react-router'
+import { Form, Link, useActionData, useNavigation } from 'react-router'
 import { RegistrationField } from '../../components/RegistrationField'
 import type { registrationAction } from './actions'
 
@@ -8,16 +8,12 @@ function localTimezone(): string {
 }
 
 export function RegistrationPage() {
-    // fetcher is used to handle form submission so we don't have to navigate away from the page
-  const fetcher = useFetcher<typeof registrationAction>()
+  const actionData = useActionData<typeof registrationAction>()
+  const navigation = useNavigation()
   const formRef = useRef<HTMLFormElement>(null)
-  // checks the state of the fetcher to determine if the form is currently being submitted
-  const isSubmitting = fetcher.state !== 'idle'
-  const result = isSubmitting ? undefined : fetcher.data
-  // checks for any errors returned from the server after form submission
-  const errors = result?.ok === false ? result.errors : undefined
+  const isSubmitting = navigation.state === 'submitting'
+  const errors = actionData?.ok === false ? actionData.errors : undefined
   const fieldErrors = errors?.fieldErrors
-  // these const change on submission when the component is reloaded
   useEffect(() => {
     document.title = 'Create your account | StudyOps'
   }, [])
@@ -69,21 +65,12 @@ export function RegistrationPage() {
         </div>
 
         <section className="min-w-0 rounded-3xl border border-primary/15 bg-surface-card p-5 shadow-card sm:p-8 lg:p-10" aria-labelledby="registration-title">
-          {result?.ok === true ? (
-            <div role="status" className="py-6 text-center">
-              <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-success-subtle text-3xl font-extrabold text-success" aria-hidden="true">✓</span>
-              <h2 id="registration-title" className="mt-5 text-3xl font-extrabold text-text-strong">Your account is ready.</h2>
-              <p className="mx-auto mt-3 max-w-md leading-7 text-text-muted">Your study preferences are saved. You can return to the welcome page.</p>
-              <Link to="/" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 font-extrabold text-text-strong shadow-accent-glow transition-colors hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none">Back to welcome</Link>
-            </div>
-          ) : (
-            <>
               <div className="border-b border-dashed border-border pb-6">
                 <h2 id="registration-title" className="text-2xl font-extrabold text-text-strong sm:text-3xl">Create your account</h2>
                 <p className="mt-2 text-sm leading-6 text-text-muted">A few details now will make your first plan feel like yours.</p>
               </div>
                 {/* This is the form for creating a new user account */}
-              <fetcher.Form method="post" ref={formRef} noValidate aria-busy={isSubmitting} className="mt-7 space-y-8">
+              <Form method="post" ref={formRef} noValidate aria-busy={isSubmitting} className="mt-7 space-y-8">
                 {/* checks for form wide errors not specific fields */}
                 {errors?.formErrors.length ? (
                   <div data-error-summary tabIndex={-1} role="alert" className="rounded-xl border border-coral/35 bg-coral/10 p-4 text-sm font-medium text-error-dark outline-none focus-visible:ring-3 focus-visible:ring-coral/40">
@@ -117,11 +104,9 @@ export function RegistrationPage() {
                   <button type="submit" disabled={isSubmitting} className="flex min-h-13 w-full items-center justify-center rounded-xl bg-accent px-7 py-3.5 text-base font-extrabold text-text-strong shadow-accent-glow transition duration-200 hover:-translate-y-0.5 hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary active:translate-y-0 active:bg-accent-dark disabled:opacity-60 motion-reduce:transform-none motion-reduce:transition-none">
                     {isSubmitting ? 'Creating account…' : 'Create account'}
                   </button>
-                  <p className="mt-4 text-center text-sm text-text-muted">Already exploring? <Link to="/" className="font-bold text-primary-dark underline underline-offset-4 hover:text-text-strong focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary">Return to welcome</Link></p>
+                  <p className="mt-4 text-center text-sm text-text-muted">Already have an account? <Link to="/login" className="font-bold text-primary-dark underline underline-offset-4 hover:text-text-strong focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary">Log in</Link></p>
                 </div>
-              </fetcher.Form>
-            </>
-          )}
+              </Form>
         </section>
       </main>
     </div>

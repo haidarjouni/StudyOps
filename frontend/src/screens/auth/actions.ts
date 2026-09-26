@@ -1,6 +1,8 @@
-import { data, type ActionFunctionArgs } from 'react-router'
+import { data, redirect, type ActionFunctionArgs } from 'react-router'
 import * as z from 'zod'
 import type {
+  LoginErrors,
+  LoginInput,
   RegistrationErrors,
   RegistrationField,
   RegistrationInput,
@@ -176,7 +178,7 @@ export async function registrationAction({ request }: ActionFunctionArgs) {
       body: JSON.stringify(toRegistrationInput(parsed.data)),
     })
 
-    if (response.status === 201) return data({ ok: true as const })
+    if (response.status === 201) return redirect('/login?registered=1')
     if (response.status === 400) {
       const body: unknown = await response.json().catch(() => null)
       return failure(backendErrors(body), 400)
@@ -185,5 +187,57 @@ export async function registrationAction({ request }: ActionFunctionArgs) {
     return failure({ formErrors: ['Registration could not be completed. Please try again.'], fieldErrors: {} }, response.status)
   } catch {
     return failure({ formErrors: ['Unable to reach StudyOps. Check your connection and try again.'], fieldErrors: {} }, 503)
+  }
+}
+
+const loginSchema: z.ZodType<LoginInput> = z.strictObject({
+  username: z.string().trim().min(1, 'Enter your username.'),
+  password: z.string().min(1, 'Enter your password.'),
+})
+
+function loginFailure(errors: LoginErrors, status: number) {
+  return data({ ok: false as const, errors }, { status })
+}
+
+export async function loginAction({ request }: ActionFunctionArgs) {
+  const formData = await request.formData()
+  const password = formData.get('password')
+  const candidate: LoginInput = {
+    username: stringValue(formData, 'username'),
+    password: typeof password === 'string' ? password : '',
+  }
+  const parsed = loginSchema.safeParse(candidate)
+
+  if (!parsed.success) {
+    return loginFailure(z.flattenError(parsed.error), 400)
+  }
+
+  const configuredBase = import.meta.env.VITE_API_BASE_URL
+  if (!configuredBase) {
+    return loginFailure({ formErrors: ['Login is not configured yet. Please try again later.'], fieldErrors: {} }, 503)
+  }
+
+  const apiBase = import.meta.env.DEV ? window.location.origin : configuredBase
+  const url = new URL('/api/accounts/login/', apiBase)
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsed.data),
+    })
+
+    if (response.status === 200) return data({ ok: true as const })
+    if (response.status === 401) {
+      return loginFailure({ formErrors: ['Incorrect username or password.'], fieldErrors: {} }, 401)
+    }
+    if (response.status === 400) {
+      return loginFailure({ formErrors: ['Please check your details and try again.'], fieldErrors: {} }, 400)
+    }
+
+    return loginFailure({ formErrors: ['Login could not be completed. Please try again.'], fieldErrors: {} }, response.status)
+  } catch {
+    return loginFailure({ formErrors: ['Unable to reach StudyOps. Check your connection and try again.'], fieldErrors: {} }, 503)
   }
 }
