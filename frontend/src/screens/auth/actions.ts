@@ -228,7 +228,7 @@ export async function loginAction({ request }: ActionFunctionArgs) {
       body: JSON.stringify(parsed.data),
     })
 
-    if (response.status === 200) return data({ ok: true as const })
+    if (response.status === 200) return redirect('/app')
     if (response.status === 401) {
       return loginFailure({ formErrors: ['Incorrect username or password.'], fieldErrors: {} }, 401)
     }

@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
     server: apiBaseUrl ? {
       proxy: {
         '/api': { target: apiBaseUrl, changeOrigin: true },
+        '/auth': { target: apiBaseUrl, changeOrigin: true },
       },
     } : undefined,
   }

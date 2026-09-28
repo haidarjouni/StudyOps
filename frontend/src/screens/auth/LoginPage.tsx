@@ -11,7 +11,7 @@ export function LoginPage() {
   const isSubmitting = fetcher.state !== 'idle'
   const result = isSubmitting ? undefined : fetcher.data
   const errors = result?.ok === false ? result.errors : undefined
-  const isSignedIn = result?.ok === true
+  const isSignedIn = Boolean(result && 'ok' in result && result.ok)
 
   useEffect(() => {
     document.title = 'Log in | StudyOps'
@@ -73,7 +73,7 @@ export function LoginPage() {
               <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-success-subtle text-3xl font-extrabold text-success" aria-hidden="true">✓</span>
               <h2 id="login-title" className="mt-5 text-3xl font-extrabold text-text-strong">You’re logged in.</h2>
               <p className="mx-auto mt-3 max-w-md leading-7 text-text-muted">Welcome back to StudyOps.</p>
-              <Link to="/" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 font-extrabold text-text-strong shadow-accent-glow transition-colors hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none">Back to welcome</Link>
+              <Link to="/app" className="mt-7 inline-flex min-h-12 items-center justify-center rounded-xl bg-accent px-7 font-extrabold text-text-strong shadow-accent-glow transition-colors hover:bg-accent-light focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none">Open dashboard</Link>
             </div>
           ) : (
             <>
