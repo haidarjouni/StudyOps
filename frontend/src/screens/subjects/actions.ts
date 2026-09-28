@@ -9,7 +9,7 @@ const schema: z.ZodType<SubjectInput> = z.strictObject({
   code: z.string().min(1, "Enter a code.").max(10),
   semester: z.number().int().positive("Enter a positive semester."),
 });
-
+// 
 async function save({ request, params }: ActionFunctionArgs, edit: boolean) {
   const form = await request.formData();
   const parsed = schema.safeParse({
@@ -17,11 +17,14 @@ async function save({ request, params }: ActionFunctionArgs, edit: boolean) {
     code: value(form, "code").toUpperCase(),
     semester: numberValue(form, "semester"),
   });
+
+//   if not parsed successfully return a 400 response with the validation errors
   if (!parsed.success)
     return data(
       { ok: false as const, errors: z.flattenError(parsed.error) },
       { status: 400 }
     );
+// if i am editing i will pass the id of the subject if not i will use create subject instead
   try {
     const subject = edit
       ? await updateSubject(params.id!, parsed.data)
@@ -34,7 +37,9 @@ async function save({ request, params }: ActionFunctionArgs, edit: boolean) {
     );
   }
 }
-export const createSubjectAction = (args: ActionFunctionArgs) =>save(args, false);
+
+export const createSubjectAction = (args: ActionFunctionArgs) =>
+  save(args, false);
 
 export const editSubjectAction = (args: ActionFunctionArgs) => save(args, true);
 

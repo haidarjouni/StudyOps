@@ -26,6 +26,7 @@ export function SubjectForm({ subject }: { subject?: Subject }) {
       aria-busy={busy}
       className={`${card} max-w-2xl space-y-5`}
     >
+        {/* if form errors exist */}
       {errors?.formErrors.length ? (
         <div
           data-error-summary
@@ -37,6 +38,7 @@ export function SubjectForm({ subject }: { subject?: Subject }) {
         </div>
       ) : null}
       {(
+        // will use either subject data if editing or empty strings if creating new subject
         [
           [
             "name",
@@ -49,9 +51,11 @@ export function SubjectForm({ subject }: { subject?: Subject }) {
         ] as const
       ).map(([name, label, initial, placeholder]) => (
         <div key={name}>
+          
           <label htmlFor={name} className="mb-2 block text-sm font-bold">
             {label}
           </label>
+
           <input
             id={name}
             name={name}
@@ -67,6 +71,7 @@ export function SubjectForm({ subject }: { subject?: Subject }) {
             }
             className={input}
           />
+          {/* show fields errors */}
           {errors?.fieldErrors[name]?.[0] ? (
             <p id={`${name}-error`} className="mt-1 text-sm text-error-dark">
               {errors.fieldErrors[name][0]}

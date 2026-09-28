@@ -1,36 +1,36 @@
 export interface StudyPreferencesInput {
-  timezone: string
-  earliest_study_time: string
-  latest_study_time: string
-  preferred_session_minutes: number
-  buffer_minutes: number
+  timezone: string;
+  earliest_study_time: string;
+  latest_study_time: string;
+  preferred_session_minutes: number;
+  buffer_minutes: number;
 }
 
 export interface RegistrationInput {
-  username: string
-  email: string
-  password: string
-  study_preferences: StudyPreferencesInput
+  username: string;
+  email: string;
+  password: string;
+  study_preferences: StudyPreferencesInput;
 }
 
 export type RegistrationField =
-  | 'username'
-  | 'email'
-  | 'password'
-  | 'confirm_password'
-  | keyof StudyPreferencesInput
+  | "username"
+  | "email"
+  | "password"
+  | "confirm_password"
+  | keyof StudyPreferencesInput;
 
 export interface RegistrationErrors {
-  formErrors: string[]
-  fieldErrors: Partial<Record<RegistrationField, string[]>>
+  formErrors: string[];
+  fieldErrors: Partial<Record<RegistrationField, string[]>>;
 }
 
 export interface LoginInput {
-  username: string
-  password: string
+  username: string;
+  password: string;
 }
 
 export interface LoginErrors {
-  formErrors: string[]
-  fieldErrors: Partial<Record<keyof LoginInput, string[]>>
+  formErrors: string[];
+  fieldErrors: Partial<Record<keyof LoginInput, string[]>>;
 }
