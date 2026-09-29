@@ -1,14 +1,174 @@
-import { useEffect } from 'react'
-import { Form, Link, useLoaderData, useSearchParams } from 'react-router'
-import { card, EmptyState, input, PageHeading, secondary } from '../../components/DashboardParts'
-import type { tasksLoader } from './loaders'
+import { useEffect } from "react";
+import { Form, Link, useLoaderData, useSearchParams } from "react-router";
+import {
+  card,
+  EmptyState,
+  input,
+  PageHeading,
+  secondary,
+} from "../../components/DashboardParts";
+import type { tasksLoader } from "./loaders";
 export function TasksPage() {
-  const { tasks, subjects } = useLoaderData<typeof tasksLoader>()
-  const [params] = useSearchParams()
-  useEffect(() => { document.title = 'Tasks | StudyOps' }, [])
-  const date = (iso: string) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
-  return <><PageHeading title="Tasks" description="See what is due and what is already done." addTo="/app/tasks/new" addLabel="Add task" />{params.get('deleted') === '1' && <p role="status" className="mb-5 rounded-xl bg-success-subtle p-4 font-semibold text-success">Task deleted.</p>}
-    <Form method="get" className={`${card} mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5`}>
-      {[['subject', 'Subject', subjects.map(subject => [String(subject.id), subject.code])], ['task_type', 'Type', [['assignment', 'Assignment'], ['exam', 'Exam'], ['study', 'Study'], ['other', 'Other']]], ['task_status', 'Status', [['todo', 'To do'], ['in_progress', 'In progress'], ['done', 'Done'], ['cancelled', 'Cancelled']]], ['task_priority', 'Priority', [['low', 'Low'], ['medium', 'Medium'], ['high', 'High']]]] .map(([name, label, options]) => <div key={name as string}><label htmlFor={name as string} className="mb-2 block text-sm font-bold">{label as string}</label><select id={name as string} name={name as string} defaultValue={params.get(name as string) ?? ''} className={input}><option value="">All</option>{(options as string[][]).map(([id, text]) => <option key={id} value={id}>{text}</option>)}</select></div>)}<div className="flex items-end gap-2"><button className={secondary}>Apply</button><Link to="/app/tasks" className="py-3 text-sm font-bold text-primary-dark underline">Clear</Link></div>
-    </Form>{tasks.length ? <ul className="grid gap-4 lg:grid-cols-2">{tasks.sort((a, b) => a.due_date.localeCompare(b.due_date)).map(task => <li key={task.id} className={`${card} border-l-4 ${task.task_priority === 'high' ? 'border-l-coral' : 'border-l-primary'}`}><div className="flex flex-wrap items-center gap-2 text-xs font-extrabold uppercase tracking-brand text-primary-dark"><span>{subjects.find(subject => subject.id === task.subject)?.code ?? 'Subject'}</span><span>·</span><span>{task.task_type}</span><span>·</span><span>{task.task_status.replace('_', ' ')}</span></div><h2 className="mt-3 text-xl font-extrabold">{task.title}</h2><p className="mt-2 line-clamp-2 text-sm text-text-muted">{task.description}</p><p className="mt-3 text-sm font-semibold">Due {date(task.due_date)} · {task.estimated_minutes} min · {task.task_priority} priority</p><div className="mt-5 flex gap-3"><Link to={`/app/tasks/${task.id}`} className={secondary}>View task</Link><Link to={`/app/tasks/${task.id}/edit`} className="self-center font-bold text-primary-dark underline underline-offset-4">Edit</Link></div></li>)}</ul> : <EmptyState title="No tasks found" description="Add a task or change the filters to see more work." to="/app/tasks/new" action="Add task" />}</>
+  const { tasks, subjects } = useLoaderData<typeof tasksLoader>();
+  const [params] = useSearchParams();
+  useEffect(() => {
+    document.title = "Tasks | StudyOps";
+  }, []);
+  const date = (iso: string) =>
+    new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(iso));
+  return (
+    <>
+      <PageHeading
+        title="Tasks"
+        description="See what is due and what is already done."
+        addTo="/app/tasks/new"
+        addLabel="Add task"
+      />
+      {params.get("deleted") === "1" && (
+        <p
+          role="status"
+          className="mb-5 rounded-xl bg-success-subtle p-4 font-semibold text-success"
+        >
+          Task deleted.
+        </p>
+      )}
+      <Form
+        method="get"
+        className={`${card} mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5`}
+      >
+        {/* array of filter options */}
+        {[
+            // subject with ids and text to display
+          [
+            "subject",
+            "Subject",
+            subjects.map((subject) => [String(subject.id), subject.code]),
+          ],
+          [
+            "task_type",
+            "Type",
+            // array of task types with values and text to display
+            [
+              ["assignment", "Assignment"],
+              ["exam", "Exam"],
+              ["study", "Study"],
+              ["other", "Other"],
+            ],
+          ],
+          [
+            "task_status",
+            "Status",
+            // array of task statuses with values and text to display
+            [
+              ["todo", "To do"],
+              ["in_progress", "In progress"],
+              ["done", "Done"],
+              ["cancelled", "Cancelled"],
+            ],
+          ],
+          [
+            "task_priority",
+            "Priority",
+            // array of task priorities with values and text to display
+            [
+              ["low", "Low"],
+              ["medium", "Medium"],
+              ["high", "High"],
+            ],
+          ],
+        ].map(([name, label, options]) => (
+          <div key={name as string}>
+            <label
+              htmlFor={name as string}
+              className="mb-2 block text-sm font-bold"
+            >
+              {label as string}
+            </label>
+            <select
+              id={name as string}
+              name={name as string}
+              defaultValue={params.get(name as string) ?? ""}
+              className={input}
+            >
+              <option value="">All</option>
+              {(options as string[][]).map(([id, text]) => (
+                <option key={id} value={id}>
+                  {text}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+
+        <div className="flex items-end gap-2">
+          <button className={secondary}>Apply</button>
+          <Link
+            to="/app/tasks"
+            className="py-3 text-sm font-bold text-primary-dark underline"
+          >
+            Clear
+          </Link>
+        </div>
+      </Form>
+      {/* show any tasks if any */}
+      {tasks.length ? (
+        <ul className="grid gap-4 lg:grid-cols-2">
+          {tasks
+        //    sort using duedate, earliest first
+            .sort((a, b) => a.due_date.localeCompare(b.due_date))
+            .map((task) => (
+              <li
+                key={task.id}
+                className={`${card} border-l-4 ${
+                  task.task_priority === "high"
+                    ? "border-l-coral"
+                    : "border-l-primary"
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-2 text-xs font-extrabold uppercase tracking-brand text-primary-dark">
+                  <span>
+                    {/* find the subject by its ID */}
+                    {subjects.find((subject) => subject.id === task.subject)
+                      ?.code ?? "Subject"}
+                  </span>
+                  <span>·</span>
+                  <span>{task.task_type}</span>
+                  <span>·</span>
+                  <span>{task.task_status.replace("_", " ")}</span>
+                </div>
+                <h2 className="mt-3 text-xl font-extrabold">{task.title}</h2>
+                <p className="mt-2 line-clamp-2 text-sm text-text-muted">
+                  {task.description}
+                </p>
+                <p className="mt-3 text-sm font-semibold">
+                  Due {date(task.due_date)} · {task.estimated_minutes} min ·{" "}
+                  {task.task_priority} priority
+                </p>
+                <div className="mt-5 flex gap-3">
+                  <Link to={`/app/tasks/${task.id}`} className={secondary}>
+                    View task
+                  </Link>
+                  <Link
+                    to={`/app/tasks/${task.id}/edit`}
+                    className="self-center font-bold text-primary-dark underline underline-offset-4"
+                  >
+                    Edit
+                  </Link>
+                </div>
+              </li>
+            ))}
+        </ul>
+      ) : (
+        <EmptyState
+          title="No tasks found"
+          description="Add a task or change the filters to see more work."
+          to="/app/tasks/new"
+          action="Add task"
+        />
+      )}
+    </>
+  );
 }
