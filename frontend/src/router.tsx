@@ -1,4 +1,7 @@
 import { createBrowserRouter } from "react-router";
+import { createThreadAction, deleteThreadAction } from "./screens/assistant/actions";
+import { assistantThreadLoader } from "./screens/assistant/loaders";
+import { AssistantThreadPage } from "./screens/assistant/AssistantThreadPage";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { RouteErrorPage } from "./components/DashboardParts";
 import { loginAction, registrationAction } from "./screens/auth/actions";
@@ -66,6 +69,18 @@ const router = createBrowserRouter([
     children: [
       { index: true, Component: OverviewPage, loader: overviewLoader },
       { path: "logout", action: logoutAction },
+      {
+        path: "assistant",
+        children: [
+          { path: "new", action: createThreadAction },
+          {
+            path: ":thread_id",
+            Component: AssistantThreadPage,
+            loader: assistantThreadLoader,
+            action: deleteThreadAction,
+          },
+        ],
+      },
       {
         path: "subjects",
         children: [

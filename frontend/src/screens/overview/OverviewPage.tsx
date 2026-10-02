@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useLoaderData } from "react-router";
+import { Link, useLoaderData, useSearchParams } from "react-router";
 import {
     card,
     EmptyState,
@@ -16,6 +16,7 @@ function when(value: string) {
 }
 
 export function OverviewPage() {
+    const [searchParams] = useSearchParams();
     const {
         subjects,
         tasks,
@@ -64,6 +65,11 @@ export function OverviewPage() {
                 addTo="/app/tasks/new"
                 addLabel="Add task"
             />
+            {searchParams.get("chat_deleted") === "1" ? (
+                <p role="status" className="mb-6 rounded-xl border border-success/25 bg-success-subtle px-4 py-3 font-semibold text-text-strong">
+                    Chat deleted.
+                </p>
+            ) : null}
             {/* mapping to show the cards  */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {[

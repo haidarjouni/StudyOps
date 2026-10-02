@@ -1,20 +1,26 @@
 import { redirect, type LoaderFunctionArgs } from "react-router";
 import { ApiError, apiRequest } from "../../lib/api";
+import { listThreads } from "../assistant/service";
 import type { Subject } from "../../types/subjects";
 import type { Task } from "../../types/tasks";
 import type { StudySession } from "../../types/sessions";
 
 export async function dashboardLoader() {
+  let user: { id: number; username: string };
   try {
-    return {
-      user: await apiRequest<{ id: number; username: string }>(
-        "/auth/users/me/"
-      ),
-    };
+    user = await apiRequest<{ id: number; username: string }>("/auth/users/me/");
   } catch (error) {
     if (error instanceof ApiError && error.status === 401)
       throw redirect("/login");
     throw error;
+  }
+
+  try {
+    return { user, threads: await listThreads(), threadsError: false };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401)
+      throw redirect("/login");
+    return { user, threads: null, threadsError: true };
   }
 }
 
