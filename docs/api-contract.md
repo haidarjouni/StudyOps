@@ -76,6 +76,7 @@ Do not work around this by exposing JWTs to JavaScript or disabling browser secu
 | Study sessions | CRUD | `/api/study_session/` and `/api/study_session/{id}/` | Yes |
 | Preferences | `GET`, `PUT`, `PATCH` | `/api/study_preference/me` | Yes |
 | Threads | `GET`, `POST` | `/api/thread/` | Yes |
+| Thread detail | `GET`, `PUT`, `PATCH`, `DELETE` | `/api/thread/{id}/` | Yes |
 | Planning assistant | `POST` | `/chat` on the assistant service | See assistant gap below |
 
 For standard model-viewset CRUD endpoints:
@@ -545,6 +546,10 @@ Routes:
 
 - `GET /api/thread/` lists only the authenticated user's threads.
 - `POST /api/thread/` creates a thread for the authenticated user.
+- `GET /api/thread/{id}/` retrieves one of the authenticated user's threads.
+- `PUT /api/thread/{id}/` replaces a thread's writable fields.
+- `PATCH /api/thread/{id}/` updates a thread's writable fields.
+- `DELETE /api/thread/{id}/` deletes one of the authenticated user's threads.
 
 Create request:
 
@@ -556,7 +561,13 @@ Create request:
 
 `title` is optional, may be blank, and has a maximum length of 255 characters. `id`, `created_at`, and `updated_at` are read-only.
 
-There are currently no retrieve, update, or delete routes for an individual thread. Create a thread through this endpoint before using its ID with the planning assistant.
+Thread IDs in detail routes are UUIDs. The viewset filters by the authenticated user, so retrieving, updating, or deleting another user's thread returns `404`. Unauthenticated requests return `401`.
+
+To delete a thread, send `DELETE /api/thread/{id}/` with the user's authentication cookie. A successful deletion returns `204 No Content` with no response body. A second delete of the same ID returns `404` because the thread no longer exists. Deletion removes the Django `Thread` record; it does not remove study tasks or sessions created through an approved plan.
+
+The assistant stores conversation state separately in its LangGraph checkpoint database. The thread deletion endpoint does not clear those checkpoints, and the assistant `/chat` endpoint does not currently verify that the Django thread still exists. Do not present thread deletion as complete conversation-data erasure.
+
+Create a thread through this endpoint before using its ID with the planning assistant.
 
 ## 10. Planning assistant chat
 
