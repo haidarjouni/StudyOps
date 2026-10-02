@@ -10,7 +10,7 @@ User = get_user_model()
 
 class ThreadListCreateTest(APITestCase):
     def setUp(self):
-        self.url = reverse("thread-list-create")
+        self.url = reverse("thread-list")
         self.user = User.objects.create_user(
             username="thread_owner",
             password="test-password",
@@ -46,3 +46,53 @@ class ThreadListCreateTest(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Thread.objects.count(), 0)
+
+
+class ThreadDetailTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="thread_owner",
+            password="test-password",
+        )
+        self.other_user = User.objects.create_user(
+            username="other_user",
+            password="test-password",
+        )
+        self.thread = Thread.objects.create(user=self.user, title="My study plan")
+        self.other_thread = Thread.objects.create(
+            user=self.other_user, title="Someone else's plan"
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_retrieve_own_thread(self):
+        response = self.client.get(reverse("thread-detail", args=[self.thread.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.thread.id))
+        self.assertEqual(response.data["title"], "My study plan")
+
+    def test_cannot_retrieve_another_users_thread(self):
+        response = self.client.get(reverse("thread-detail", args=[self.other_thread.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_delete_own_thread(self):
+        response = self.client.delete(reverse("thread-detail", args=[self.thread.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Thread.objects.filter(id=self.thread.id).exists())
+        self.assertTrue(Thread.objects.filter(id=self.other_thread.id).exists())
+
+    def test_cannot_delete_another_users_thread(self):
+        response = self.client.delete(reverse("thread-detail", args=[self.other_thread.id]))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Thread.objects.filter(id=self.other_thread.id).exists())
+
+    def test_anonymous_user_cannot_retrieve_or_delete_thread(self):
+        self.client.force_authenticate(user=None)
+        url = reverse("thread-detail", args=[self.thread.id])
+
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.client.delete(url).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertTrue(Thread.objects.filter(id=self.thread.id).exists())

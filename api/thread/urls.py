@@ -1,7 +1,8 @@
-from django.urls import path
+from rest_framework import routers
 
-from .views import ThreadListCreateView
+from .views import ThreadViewSet
 
-urlpatterns = [
-    path("", ThreadListCreateView.as_view(), name="thread-list-create"),
-]
+router = routers.DefaultRouter()
+router.register("", ThreadViewSet, basename="thread")
+
+urlpatterns = router.urls
