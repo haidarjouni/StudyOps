@@ -77,7 +77,7 @@ Do not work around this by exposing JWTs to JavaScript or disabling browser secu
 | Preferences | `GET`, `PUT`, `PATCH` | `/api/study_preference/me` | Yes |
 | Threads | `GET`, `POST` | `/api/thread/` | Yes |
 | Thread detail | `GET`, `PUT`, `PATCH`, `DELETE` | `/api/thread/{id}/` | Yes |
-| Planning assistant | `POST` | `/chat` on the assistant service | See assistant gap below |
+| Planning assistant | `POST` | `/chat` on the assistant service | Access and refresh cookies |
 
 For standard model-viewset CRUD endpoints:
 
@@ -580,8 +580,6 @@ The assistant maintains graph state by `thread_id`. A request must contain exact
 ```json
 {
   "thread_id": "de37ed11-e643-462a-8d7e-5359ed216e6c",
-  "user_token": "access-token",
-  "refresh_token": "refresh-token",
   "time_zone": "Asia/Beirut",
   "user_input": "Plan my study sessions for tomorrow"
 }
@@ -589,7 +587,8 @@ The assistant maintains graph state by `thread_id`. A request must contain exact
 
 Rules:
 
-- `thread_id`, `user_token`, and `refresh_token` are required nonblank strings.
+- `thread_id` is a required nonblank string.
+- `access_token` and `refresh_token` are required nonblank cookies, not JSON fields. Missing or blank cookies return `401`. Body token fields do not authenticate the request.
 - `time_zone` is optional, defaults to `Asia/Beirut`, and must be a valid IANA timezone.
 - `user_input` must be nonblank.
 - Do not include `command` in the same request.
@@ -601,8 +600,6 @@ Approve:
 ```json
 {
   "thread_id": "de37ed11-e643-462a-8d7e-5359ed216e6c",
-  "user_token": "access-token",
-  "refresh_token": "refresh-token",
   "time_zone": "Asia/Beirut",
   "command": {
     "action": "approve"
@@ -615,8 +612,6 @@ Request changes:
 ```json
 {
   "thread_id": "de37ed11-e643-462a-8d7e-5359ed216e6c",
-  "user_token": "access-token",
-  "refresh_token": "refresh-token",
   "time_zone": "Asia/Beirut",
   "command": {
     "action": "edit",
@@ -630,8 +625,6 @@ Cancel:
 ```json
 {
   "thread_id": "de37ed11-e643-462a-8d7e-5359ed216e6c",
-  "user_token": "access-token",
-  "refresh_token": "refresh-token",
   "time_zone": "Asia/Beirut",
   "command": {
     "action": "cancel"
@@ -731,11 +724,11 @@ Cancellation:
 
 An edit normally returns another `interrupted` response with a revised draft. Sending new `user_input` while a review is pending returns the existing pending review instead of starting a separate run.
 
-### Current assistant-authentication gap
+### Assistant cookie authentication
 
-The `/chat` request requires raw `user_token` and `refresh_token` strings so the assistant can call the Django API. The browser cannot read those tokens because the Django API correctly stores them in HTTP-only cookies. Therefore the frontend cannot safely satisfy the current `/chat` request contract directly.
+The `/chat` endpoint reads `access_token` and `refresh_token` from incoming cookies and forwards them into the assistant runtime context for Django API calls. Neither token belongs in the JSON request body or model messages. The endpoint does not refresh tokens or set response cookies.
 
-Do not expose the cookies to JavaScript. Before implementing assistant chat in the browser, introduce an approved secure integration such as a same-origin backend proxy that reads the cookies server-side and forwards the credentials to the assistant, or revise the assistant authentication boundary.
+Browser requests must include credentials, and the cookie host/path/security settings must allow delivery to the assistant. Cross-origin access still needs credentialed CORS configuration, or a same-origin proxy that forwards cookies unchanged. The frontend integration has not yet been migrated from its previous credential bridge; that bridge must be updated separately.
 
 ## 11. Error handling
 
@@ -780,6 +773,7 @@ Frontend code must not assume all error values are strings. Preserve field assoc
 | Status | Meaning |
 | ---: | --- |
 | `200` | Completed, cancelled, or paused for review; inspect the response `status` |
+| `401` | Missing or blank authentication cookies |
 | `409` | A review command was sent without a pending review |
 | `422` | Request-body validation failed |
 | `500` | Unhandled assistant, model, checkpoint, or downstream-service failure |
@@ -805,5 +799,5 @@ FastAPI validation errors use a `detail` array. Conflict errors use a string:
 - Render field-level validation from `400` responses instead of replacing it with a generic error whenever possible.
 - Model loading, empty, validation, authentication-expired, server-error, and retry states.
 - Treat `404` on an authenticated detail route as either missing or inaccessible; do not reveal another user's resource existence.
-- Do not call the assistant directly from browser code until its credential-forwarding gap is resolved.
+- Send assistant credentials through cookies only; use a same-origin proxy or a configured credentialed CORS setup.
 - Do not invent unlisted endpoints, fields, pagination metadata, ordering guarantees, or assistant response states.

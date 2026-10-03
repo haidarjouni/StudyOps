@@ -11,8 +11,6 @@ Send JSON using an existing thread ID created by the frontend/API:
 ```json
 {
   "thread_id": "existing-thread-id",
-  "user_token": "access-token",
-  "refresh_token": "refresh-token",
   "time_zone": "Asia/Beirut",
   "user_input": "Plan my study sessions for tomorrow"
 }
@@ -22,7 +20,10 @@ For a review response, replace `user_input` with `command`, for example
 `"command": {"action": "approve"}`. Supported actions are `approve`, `cancel`,
 and `edit` (which also requires nonblank `feedback`). Supply exactly one of
 `user_input` or `command`. Invalid bodies return 422; a command without a pending
-review returns 409. Credentials are passed into runtime context, not graph state.
+review returns 409. Send authentication using the `access_token` and
+`refresh_token` HTTP-only cookies. Missing or blank cookies return 401; token
+fields in the JSON body do not authenticate the request. Credentials are passed
+into runtime context, not graph state. This endpoint does not refresh or set cookies.
 Checkpoint tables must already be initialized, as described below.
 
 Responses contain only frontend output: `{"status": "interrupted", "interrupts": [...]}`

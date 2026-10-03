@@ -6,8 +6,6 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 class ChatRequest(BaseModel):
     thread_id: str = Field(min_length=1)
-    user_token: str = Field(min_length=1, repr=False)
-    refresh_token: str = Field(min_length=1, repr=False)
     time_zone: str = "Asia/Beirut"
     user_input: str | None = None
     command: dict[str, str] | None = None

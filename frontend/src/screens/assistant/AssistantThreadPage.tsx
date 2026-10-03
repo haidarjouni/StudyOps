@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
 import type { deleteThreadAction } from "./actions";
 import type { assistantThreadLoader } from "./loaders";
+import { useAssistantChat } from "./hooks";
+import { AssistantConversation } from "../../components/AssistantConversation";
 
 export function AssistantThreadPage() {
-  const { thread } = useLoaderData<typeof assistantThreadLoader>();
+  const { thread, timezone, subjects } = useLoaderData<typeof assistantThreadLoader>();
+  const chat = useAssistantChat(thread.id, timezone);
   const title = thread.title || "New chat";
   const [confirmingThreadId, setConfirmingThreadId] = useState<string | null>(null);
   const confirmingDelete = confirmingThreadId === thread.id;
@@ -55,7 +58,7 @@ export function AssistantThreadPage() {
           <p className="text-xs font-extrabold uppercase tracking-brand text-sky-dark">StudyOps Assistant</p>
           <h1 id="assistant-title" className="truncate text-xl font-extrabold text-text-strong sm:text-2xl">{title}</h1>
         </div>
-        <button ref={deleteButtonRef} type="button" aria-expanded={confirmingDelete} aria-controls="delete-chat-confirmation" disabled={isDeleting} onClick={handleOpenDelete} className="min-h-11 shrink-0 rounded-xl border border-coral-dark px-3 py-2 text-sm font-bold text-coral-dark transition-colors hover:bg-coral/10 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-coral disabled:opacity-60 motion-reduce:transition-none">
+        <button ref={deleteButtonRef} type="button" aria-expanded={confirmingDelete} aria-controls="delete-chat-confirmation" disabled={isDeleting || chat.pending !== null} onClick={handleOpenDelete} className="min-h-11 shrink-0 rounded-xl border border-coral-dark px-3 py-2 text-sm font-bold text-coral-dark transition-colors hover:bg-coral/10 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-coral disabled:opacity-60 motion-reduce:transition-none">
           Delete chat
         </button>
       </header>
@@ -79,29 +82,7 @@ export function AssistantThreadPage() {
         </div>
       ) : null}
 
-      <div className="flex flex-1 items-center justify-center bg-sky-subtle/30 px-5 py-12 sm:px-8">
-        <div className="max-w-md text-center">
-          <div aria-hidden="true" className="mx-auto flex size-16 items-center justify-center rounded-3xl border border-sky/30 bg-surface-card text-sky-dark shadow-subtle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-8">
-              <path d="M12 3.5 13.8 9l5.7 2-5.7 2-1.8 5.5L10.2 13l-5.7-2 5.7-2L12 3.5Z" />
-              <path d="m19 17 .6 1.4L21 19l-1.4.6L19 21l-.6-1.4L17 19l1.4-.6L19 17Z" />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-2xl font-extrabold text-text-strong sm:text-3xl">Your chat is ready</h2>
-          <p className="mt-3 leading-7 text-text-muted">This is your space to plan study time and work through what comes next. Messaging will be available here soon.</p>
-        </div>
-      </div>
-
-      <div className="border-t border-border bg-surface-card p-4 sm:p-6">
-        <div className="mx-auto max-w-3xl">
-          <label htmlFor="assistant-message" className="sr-only">Message the StudyOps Assistant</label>
-          <div className="flex items-end gap-3 rounded-2xl border border-border bg-cream p-3">
-            <textarea id="assistant-message" rows={2} disabled placeholder="Messaging is coming soon" className="min-h-14 min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-sm text-text-muted outline-none placeholder:text-text-muted" />
-            <button type="button" disabled className="min-h-11 shrink-0 rounded-xl bg-accent px-5 text-sm font-extrabold text-text-strong opacity-60">Send</button>
-          </div>
-          <p className="mt-2 text-center text-xs font-medium text-text-muted">Chat messages are not available yet.</p>
-        </div>
-      </div>
+      <AssistantConversation key={thread.id} chat={chat} subjects={subjects} timezone={timezone} disabled={isDeleting || confirmingDelete} />
     </section>
   );
 }

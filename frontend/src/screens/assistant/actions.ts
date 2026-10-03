@@ -1,7 +1,17 @@
 import { data, redirect, type ActionFunctionArgs } from "react-router";
 import { ApiError, formErrors, value } from "../../lib/api";
 import { isThreadId } from "./helpers";
-import { createThread, deleteThread } from "./service";
+import { createThread, deleteThread, sendAssistantMessage } from "./service";
+import { assistantInputSchema } from "./schemas";
+import type { AssistantInput } from "../../types/assistant";
+
+// Chat is a live interaction; its domain hook owns pending state independently
+// of route navigation and delegates all requests to this action/service boundary.
+export async function submitAssistantMessage(input: AssistantInput) {
+  const parsed = assistantInputSchema.safeParse(input);
+  if (!parsed.success) throw new ApiError(400, null);
+  return sendAssistantMessage(parsed.data);
+}
 
 export async function createThreadAction() {
   try {

@@ -12,14 +12,15 @@ def endpoint(monkeypatch):
 
     runner = AsyncMock(return_value={"messages": []})
     monkeypatch.setattr(main, "main", runner)
-    return TestClient(main.app), runner
+    client = TestClient(main.app)
+    client.cookies.set("access_token", "access")
+    client.cookies.set("refresh_token", "refresh")
+    return client, runner
 
 
 def payload(**message):
     return dict(
         thread_id="existing-thread",
-        user_token="access",
-        refresh_token="refresh",
         **message
     )
 
@@ -30,6 +31,7 @@ def payload(**message):
         {"user_input": "Plan tomorrow"},
         {"command": {"action": "approve"}},
         {"command": {"action": "edit", "feedback": "Start later"}},
+        {"command": {"action": "cancel"}},
     ],
 )
 def test_message_forwarding(endpoint, message):
@@ -44,6 +46,60 @@ def test_message_forwarding(endpoint, message):
         user_request=message.get("user_input"),
         command=message.get("command"),
     )
+
+
+@pytest.mark.parametrize(
+    "cookies",
+    [
+        {},
+        {"access_token": "access"},
+        {"refresh_token": "refresh"},
+        {"access_token": "", "refresh_token": "refresh"},
+        {"access_token": "access", "refresh_token": ""},
+        {"access_token": " ", "refresh_token": "refresh"},
+    ],
+)
+def test_missing_authentication_cookies_returns_unauthorized(endpoint, cookies):
+    client, runner = endpoint
+    client.cookies.clear()
+    client.cookies.update(cookies)
+    response = client.post("/chat", json=payload(user_input="Plan tomorrow"))
+    assert response.status_code == 401
+    runner.assert_not_awaited()
+
+
+def test_body_tokens_cannot_replace_cookies(endpoint):
+    client, runner = endpoint
+    client.cookies.clear()
+    response = client.post(
+        "/chat",
+        json=payload(user_input="Plan tomorrow", user_token="body-access", refresh_token="body-refresh"),
+    )
+    assert response.status_code == 401
+    runner.assert_not_awaited()
+
+
+def test_body_tokens_cannot_override_cookies(endpoint):
+    client, runner = endpoint
+    response = client.post(
+        "/chat",
+        json=payload(user_input="Plan tomorrow", user_token="body-access", refresh_token="body-refresh"),
+    )
+    assert response.status_code == 200
+    assert runner.await_args.kwargs["user_token"] == "access"
+    assert runner.await_args.kwargs["refresh_token"] == "refresh"
+
+
+def test_chat_schema_documents_cookie_authentication(endpoint):
+    client, _ = endpoint
+    schema = client.get("/openapi.json").json()
+    fields = schema["components"]["schemas"]["ChatRequest"]["properties"]
+    assert "user_token" not in fields
+    assert "refresh_token" not in fields
+    parameters = schema["paths"]["/chat"]["post"]["parameters"]
+    assert {(item["name"], item["in"]) for item in parameters} == {
+        ("access_token", "cookie"), ("refresh_token", "cookie")
+    }
 
 
 @pytest.mark.parametrize(
